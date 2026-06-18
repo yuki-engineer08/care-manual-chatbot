@@ -4,12 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-This project is in its initial scaffolding stage. The codebase currently consists of:
-- `src/chat.py` — empty, intended as the entry point for a chatbot built on the Anthropic API
-- `requirements.txt` — declares `anthropic` and `python-dotenv` as dependencies
-- `.env` — local environment file (gitignored) expected to hold API keys (e.g. `ANTHROPIC_API_KEY`)
+A care-facility staff chatbot built on the Anthropic API, with both a CLI and a web interface.
 
-There is no build, lint, or test tooling configured yet. As this project grows, update this file with real commands (install, run, test) and architectural notes once they exist — avoid documenting structure that isn't there yet.
+- `src/bot.py` — shared core: `MODEL` (`claude-haiku-4-5`), `SYSTEM_PROMPT` (care-practice assistant persona), and `ask(messages)` which calls the Anthropic Messages API. Both the CLI and the web API import from here so the persona/model stay in one place.
+- `src/chat.py` — CLI entry point. Keeps conversation history in memory for the session and reconfigures stdin/stdout to UTF-8 (Windows consoles default to a non-UTF-8 codepage, which corrupts Japanese input/output otherwise).
+- `src/api.py` — FastAPI app exposing `POST /api/chat` (`{"messages": [{"role", "content"}, ...]}` → `{"reply": "..."}`) and serving `static/` (the frontend) at `/`. Conversation history is stateless on the server — the frontend resends the full message list on every request.
+- `static/index.html` — single-file vanilla JS/HTML/CSS chat UI; no build step.
+- `.env` (gitignored) — holds `ANTHROPIC_API_KEY`, loaded via `python-dotenv`.
+
+There is no lint or test tooling configured yet.
 
 ## Setup
 
@@ -17,4 +20,15 @@ There is no build, lint, or test tooling configured yet. As this project grows, 
 pip install -r requirements.txt
 ```
 
-API credentials should be loaded via `python-dotenv` from a local `.env` file, which must never be committed.
+## Running
+
+CLI:
+```
+python src/chat.py
+```
+
+Web (serves the chat UI and API on http://127.0.0.1:8000):
+```
+cd src
+uvicorn api:app --reload
+```
