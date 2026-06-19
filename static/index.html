@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>介護スタッフ向けチャットボット</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  body {
+    font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 16px;
+    background: #f5f5f5;
+  }
+  h1 {
+    font-size: 20px;
+  }
+  h2 {
+    font-size: 15px;
+    margin: 16px 0 8px;
+  }
+  #chat {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    height: 45vh;
+    overflow-y: auto;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  .msg {
+    margin-bottom: 12px;
+    white-space: pre-wrap;
+    line-height: 1.5;
+  }
+  .msg .role {
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+  .msg.user .role { color: #1565c0; }
+  .msg.assistant .role { color: #2e7d32; }
+  .msg .body > *:first-child { margin-top: 0; }
+  .msg .body > *:last-child { margin-bottom: 0; }
+  .msg .body h1,
+  .msg .body h2,
+  .msg .body h3 {
+    margin: 12px 0 6px;
+  }
+  .msg .body ul,
+  .msg .body ol {
+    margin: 6px 0;
+    padding-left: 1.4em;
+  }
+
+  .panel {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+  }
+  .field label {
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+  .field input,
+  .field select,
+  .field textarea {
+    padding: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  .field textarea {
+    resize: vertical;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+  }
+  #send {
+    padding: 10px 16px;
+    width: 100%;
+    font-size: 15px;
+  }
+  #send:disabled {
+    opacity: 0.5;
+  }
+</style>
+</head>
+<body>
+  <h1>介護スタッフ向けチャットボット（事故報告支援）</h1>
+
+  <div id="chat"></div>
+
+  <form id="form">
+    <div class="panel">
+      <h2>利用者・施設条件</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="adl">利用者ADL</label>
+          <select id="adl">
+            <option value="自立">自立</option>
+            <option value="一部介助">一部介助</option>
+            <option value="全介助">全介助</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="dementia">認知症の有無</label>
+          <select id="dementia">
+            <option value="あり">あり</option>
+            <option value="なし">なし</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fallRisk">転倒リスク評価</label>
+          <select id="fallRisk">
+            <option value="高">高</option>
+            <option value="中">中</option>
+            <option value="低">低</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="facilityType">施設種別</label>
+          <select id="facilityType">
+            <option value="特養">特養</option>
+            <option value="老健">老健</option>
+            <option value="グループホーム">グループホーム</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>事故発見時の状況</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="time">何時</label>
+          <input id="time" type="text" placeholder="例: 14時30分頃" />
+        </div>
+        <div class="field">
+          <label for="place">どこで</label>
+          <input id="place" type="text" placeholder="例: 居室、トイレ前" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="fallResponse">転倒時対応</label>
+        <textarea id="fallResponse" rows="2" placeholder="発見時に行った対応"></textarea>
+      </div>
+      <div class="field">
+        <label for="vitals">バイタル</label>
+        <textarea id="vitals" rows="2" placeholder="血圧・脈拍・体温・SpO2など"></textarea>
+      </div>
+      <div class="field">
+        <label for="statement">発言</label>
+        <textarea id="statement" rows="2" placeholder="利用者本人の発言内容"></textarea>
+      </div>
+      <div class="field">
+        <label for="injury">外傷・可動域の変化</label>
+        <textarea id="injury" rows="2" placeholder="外傷の有無、可動域の変化など"></textarea>
+      </div>
+      <div class="field">
+        <label for="afterResponse">転倒後対応</label>
+        <textarea id="afterResponse" rows="2" placeholder="その後の対応・報告・受診状況など"></textarea>
+      </div>
+      <div class="field">
+        <label for="input">補足・その他</label>
+        <textarea id="input" rows="4" placeholder="その他、補足したい内容があれば入力してください"></textarea>
+      </div>
+    </div>
+
+    <button id="send" type="submit">送信</button>
+  </form>
+
+<script>
+  const chatEl = document.getElementById("chat");
+  const formEl = document.getElementById("form");
+  const sendEl = document.getElementById("send");
+
+  const settingIds = ["adl", "dementia", "fallRisk", "facilityType"];
+  const fieldDefs = [
+    ["time", "何時"],
+    ["place", "どこで"],
+    ["fallResponse", "転倒時対応"],
+    ["vitals", "バイタル"],
+    ["statement", "発言"],
+    ["injury", "外傷・可動域の変化"],
+    ["afterResponse", "転倒後対応"],
+    ["input", "補足・その他"],
+  ];
+
+  const messages = [];
+
+  function setBodyContent(body, role, content) {
+    if (role === "assistant") {
+      body.innerHTML = marked.parse(content);
+    } else {
+      body.textContent = content;
+    }
+  }
+
+  function appendMessage(role, content) {
+    const div = document.createElement("div");
+    div.className = "msg " + role;
+    const roleLabel = document.createElement("div");
+    roleLabel.className = "role";
+    roleLabel.textContent = role === "user" ? "あなた" : "アシスタント";
+    const body = document.createElement("div");
+    body.className = "body";
+    setBodyContent(body, role, content);
+    div.appendChild(roleLabel);
+    div.appendChild(body);
+    chatEl.appendChild(div);
+    chatEl.scrollTop = chatEl.scrollHeight;
+    return body;
+  }
+
+  function buildReportText() {
+    const lines = [];
+
+    lines.push("【利用者・施設条件】");
+    lines.push("利用者ADL: " + document.getElementById("adl").value);
+    lines.push("認知症の有無: " + document.getElementById("dementia").value);
+    lines.push("転倒リスク評価: " + document.getElementById("fallRisk").value);
+    lines.push("施設種別: " + document.getElementById("facilityType").value);
+    lines.push("");
+    lines.push("【事故発見時の状況】");
+    for (const [id, label] of fieldDefs) {
+      const value = document.getElementById(id).value.trim();
+      if (value) {
+        lines.push(label + ": " + value);
+      }
+    }
+    return lines.join("\n");
+  }
+
+  function hasAnyContent() {
+    return fieldDefs.some(([id]) => document.getElementById(id).value.trim());
+  }
+
+  function clearFields() {
+    for (const [id] of fieldDefs) {
+      document.getElementById(id).value = "";
+    }
+  }
+
+  formEl.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!hasAnyContent()) return;
+
+    const text = buildReportText();
+    sendEl.disabled = true;
+
+    messages.push({ role: "user", content: text });
+    appendMessage("user", text);
+    const replyBody = appendMessage("assistant", "...");
+    clearFields();
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages }),
+      });
+      if (!res.ok) {
+        throw new Error("リクエストに失敗しました: " + res.status);
+      }
+      const data = await res.json();
+      messages.push({ role: "assistant", content: data.reply });
+      setBodyContent(replyBody, "assistant", data.reply);
+    } catch (err) {
+      setBodyContent(replyBody, "assistant", "エラーが発生しました: " + err.message);
+    } finally {
+      sendEl.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
