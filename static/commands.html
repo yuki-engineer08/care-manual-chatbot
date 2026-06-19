@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Claude Code よく使うコマンド一覧</title>
+<style>
+  body {
+    font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 16px;
+    background: #f5f5f5;
+  }
+  h1 {
+    font-size: 22px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 24px;
+  }
+  th, td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
+    text-align: left;
+    font-size: 14px;
+    vertical-align: top;
+  }
+  th {
+    background: #2e7d32;
+    color: #fff;
+    font-size: 13px;
+  }
+  tr:last-child td {
+    border-bottom: none;
+  }
+  tr:hover td {
+    background: #f0f7f0;
+  }
+  code {
+    background: #f1f1f1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "Consolas", monospace;
+    white-space: nowrap;
+  }
+  h2 {
+    font-size: 16px;
+    margin: 28px 0 8px;
+  }
+</style>
+</head>
+<body>
+  <h1>Claude Code よく使うコマンド一覧</h1>
+
+  <h2>スラッシュコマンド</h2>
+  <table>
+    <thead>
+      <tr><th>コマンド</th><th>説明</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>/help</code></td><td>Claude Code の使い方を表示する</td></tr>
+      <tr><td><code>/clear</code></td><td>会話履歴をクリアする</td></tr>
+      <tr><td><code>/config</code></td><td>テーマやモデルなどの設定を変更する</td></tr>
+      <tr><td><code>/login</code></td><td>アカウントにログインする</td></tr>
+      <tr><td><code>/logout</code></td><td>アカウントからログアウトする</td></tr>
+      <tr><td><code>/model</code></td><td>使用するモデルを切り替える</td></tr>
+      <tr><td><code>/init</code></td><td>CLAUDE.md（プロジェクト設定ファイル）を新規作成する</td></tr>
+      <tr><td><code>/review</code></td><td>プルリクエストをレビューする</td></tr>
+      <tr><td><code>/code-review</code></td><td>現在の差分をレビューする（低〜高精度モードあり）</td></tr>
+      <tr><td><code>/security-review</code></td><td>未コミットの変更をセキュリティ観点でレビューする</td></tr>
+      <tr><td><code>/loop</code></td><td>指定したコマンドを一定間隔で繰り返し実行する</td></tr>
+      <tr><td><code>/schedule</code></td><td>クラウド上で定期実行されるエージェントを設定する</td></tr>
+      <tr><td><code>/fast</code></td><td>高速応答モード（Opus）を切り替える</td></tr>
+    </tbody>
+  </table>
+
+  <h2>ショートカット・操作</h2>
+  <table>
+    <thead>
+      <tr><th>操作</th><th>説明</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>!&lt;command&gt;</code></td><td>シェルコマンドをそのセッション内で実行する</td></tr>
+      <tr><td><code>Ctrl+C</code></td><td>現在の処理を中断する</td></tr>
+      <tr><td><code>Esc</code></td><td>入力中の内容を取り消す／確認を閉じる</td></tr>
+      <tr><td><code>Shift+Tab</code></td><td>権限モード（Plan/Auto など）を切り替える</td></tr>
+    </tbody>
+  </table>
+</body>
+</html>
