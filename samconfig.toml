@@ -1,0 +1,14 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "care-manual-chatbot"
+region = "ap-northeast-1"
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
+resolve_s3 = true
+disable_rollback = false
+s3_prefix = "care-manual-chatbot"
+image_repositories = []
+
+[default.global.parameters]
+region = "ap-northeast-1"
