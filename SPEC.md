@@ -175,7 +175,7 @@ limiting, multi-environment (staging/prod) stacks.
 
 ## Sprint 6: 報告書一覧・詳細表示UI
 
-**Status:** Not started
+**Status:** Done
 
 **Goal:** Sprint 5で永続化された報告書一覧を、スタッフがブラウザ上で閲覧
 できるようにする。一覧から個々の報告書を選択すると、その全文(提出時の
