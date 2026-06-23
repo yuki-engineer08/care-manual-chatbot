@@ -96,9 +96,122 @@
   #send:disabled {
     opacity: 0.5;
   }
+
+  .topbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+  }
+  #toggleReports {
+    padding: 8px 14px;
+    font-size: 14px;
+  }
+  #reportsPanel {
+    display: none;
+  }
+  #reportsPanel.open {
+    display: block;
+  }
+  #mainView.hidden {
+    display: none;
+  }
+  .report-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .report-list-item {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    background: #fafafa;
+  }
+  .report-list-item:hover {
+    background: #eef3fb;
+  }
+  .report-list-item .report-time {
+    font-weight: bold;
+    font-size: 13px;
+  }
+  .report-empty {
+    color: #777;
+    padding: 12px 0;
+  }
+  #reportDetail {
+    margin-top: 12px;
+  }
+  #reportDetail h3 {
+    font-size: 14px;
+    margin: 14px 0 6px;
+  }
+  .report-fields-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .report-fields-table td {
+    border: 1px solid #ddd;
+    padding: 6px 8px;
+    vertical-align: top;
+  }
+  .report-fields-table td.field-label {
+    font-weight: bold;
+    width: 30%;
+    background: #f5f5f5;
+    white-space: nowrap;
+  }
+  #backToList {
+    margin-bottom: 10px;
+  }
+
+  #loginScreen {
+    max-width: 360px;
+    margin: 80px auto;
+  }
+  #loginScreen h1 {
+    text-align: center;
+  }
+  #loginError {
+    color: #c62828;
+    font-size: 13px;
+    margin-top: 6px;
+    min-height: 1em;
+  }
+  #appRoot.hidden {
+    display: none;
+  }
+  #loginScreen.hidden {
+    display: none;
+  }
+  #logoutBtn {
+    padding: 8px 14px;
+    font-size: 14px;
+    margin-right: 8px;
+  }
 </style>
 </head>
 <body>
+  <div id="loginScreen" class="panel">
+    <h1>スタッフログイン</h1>
+    <form id="loginForm">
+      <div class="field">
+        <label for="loginPassword">共有パスワード</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" />
+      </div>
+      <button id="loginSubmit" type="submit">ログイン</button>
+      <div id="loginError"></div>
+    </form>
+  </div>
+
+  <div id="appRoot" class="hidden">
+  <div class="topbar">
+    <button id="logoutBtn" type="button">ログアウト</button>
+    <button id="toggleReports" type="button">報告書一覧</button>
+  </div>
+
+  <div id="mainView">
   <h1>介護スタッフ向けチャットボット（事故報告支援）</h1>
 
   <div id="chat"></div>
@@ -182,8 +295,82 @@
 
     <button id="send" type="submit">送信</button>
   </form>
+  </div>
+
+  <div id="reportsPanel" class="panel">
+    <div id="reportListView">
+      <h2>保存済み報告書一覧</h2>
+      <div id="reportListContainer"></div>
+    </div>
+    <div id="reportDetailView" style="display:none;">
+      <button id="backToList" type="button">← 一覧に戻る</button>
+      <div id="reportDetail"></div>
+    </div>
+  </div>
+  </div>
 
 <script>
+  // --- Sprint 7: スタッフ認証によるアクセス制限 ---
+  const loginScreenEl = document.getElementById("loginScreen");
+  const appRootEl = document.getElementById("appRoot");
+  const loginFormEl = document.getElementById("loginForm");
+  const loginPasswordEl = document.getElementById("loginPassword");
+  const loginErrorEl = document.getElementById("loginError");
+  const logoutBtnEl = document.getElementById("logoutBtn");
+
+  function showApp() {
+    loginScreenEl.classList.add("hidden");
+    appRootEl.classList.remove("hidden");
+  }
+
+  function showLogin() {
+    appRootEl.classList.add("hidden");
+    loginScreenEl.classList.remove("hidden");
+  }
+
+  async function checkSession() {
+    try {
+      const res = await fetch("/api/session");
+      if (res.ok) {
+        showApp();
+      } else {
+        showLogin();
+      }
+    } catch {
+      showLogin();
+    }
+  }
+
+  loginFormEl.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    loginErrorEl.textContent = "";
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: loginPasswordEl.value }),
+      });
+      if (!res.ok) {
+        loginErrorEl.textContent = "パスワードが正しくありません。";
+        return;
+      }
+      loginPasswordEl.value = "";
+      showApp();
+    } catch (err) {
+      loginErrorEl.textContent = "ログインに失敗しました: " + err.message;
+    }
+  });
+
+  logoutBtnEl.addEventListener("click", async () => {
+    try {
+      await fetch("/api/logout", { method: "POST" });
+    } finally {
+      showLogin();
+    }
+  });
+
+  checkSession();
+
   const chatEl = document.getElementById("chat");
   const formEl = document.getElementById("form");
   const sendEl = document.getElementById("send");
@@ -199,8 +386,45 @@
     ["afterResponse", "転倒後対応"],
     ["input", "補足・その他"],
   ];
+  const allFieldIds = [...settingIds, ...fieldDefs.map(([id]) => id)];
+  const DRAFT_KEY = "incidentReportDraft";
 
   const messages = [];
+
+  function saveDraft() {
+    const draft = {};
+    for (const id of allFieldIds) {
+      draft[id] = document.getElementById(id).value;
+    }
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  }
+
+  function loadDraft() {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    let draft;
+    try {
+      draft = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    for (const id of allFieldIds) {
+      if (Object.prototype.hasOwnProperty.call(draft, id)) {
+        document.getElementById(id).value = draft[id];
+      }
+    }
+  }
+
+  function clearDraft() {
+    localStorage.removeItem(DRAFT_KEY);
+  }
+
+  for (const id of allFieldIds) {
+    const el = document.getElementById(id);
+    el.addEventListener("input", saveDraft);
+    el.addEventListener("change", saveDraft);
+  }
+  loadDraft();
 
   function setBodyContent(body, role, content) {
     if (role === "assistant") {
@@ -249,6 +473,14 @@
     return fieldDefs.some(([id]) => document.getElementById(id).value.trim());
   }
 
+  function collectReportFields() {
+    const fields = {};
+    for (const id of allFieldIds) {
+      fields[id] = document.getElementById(id).value;
+    }
+    return fields;
+  }
+
   function clearFields() {
     for (const [id] of fieldDefs) {
       document.getElementById(id).value = "";
@@ -260,18 +492,18 @@
     if (!hasAnyContent()) return;
 
     const text = buildReportText();
+    const reportFields = collectReportFields();
     sendEl.disabled = true;
 
     messages.push({ role: "user", content: text });
     appendMessage("user", text);
     const replyBody = appendMessage("assistant", "...");
-    clearFields();
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ messages, report_fields: reportFields }),
       });
       if (!res.ok) {
         throw new Error("リクエストに失敗しました: " + res.status);
@@ -279,12 +511,167 @@
       const data = await res.json();
       messages.push({ role: "assistant", content: data.reply });
       setBodyContent(replyBody, "assistant", data.reply);
+      clearFields();
+      clearDraft();
     } catch (err) {
       setBodyContent(replyBody, "assistant", "エラーが発生しました: " + err.message);
     } finally {
       sendEl.disabled = false;
     }
   });
+
+  // --- Sprint 6: 報告書一覧・詳細表示 ---
+  const mainViewEl = document.getElementById("mainView");
+  const reportsPanelEl = document.getElementById("reportsPanel");
+  const toggleReportsEl = document.getElementById("toggleReports");
+  const reportListViewEl = document.getElementById("reportListView");
+  const reportDetailViewEl = document.getElementById("reportDetailView");
+  const reportListContainerEl = document.getElementById("reportListContainer");
+  const reportDetailEl = document.getElementById("reportDetail");
+  const backToListEl = document.getElementById("backToList");
+
+  const fieldLabelMap = {};
+  for (const [id, label] of fieldDefs) {
+    fieldLabelMap[id] = label;
+  }
+  const settingLabelMap = {
+    adl: "利用者ADL",
+    dementia: "認知症の有無",
+    fallRisk: "転倒リスク評価",
+    facilityType: "施設種別",
+  };
+  const allLabelMap = { ...settingLabelMap, ...fieldLabelMap };
+
+  function formatTimestamp(isoString) {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return isoString;
+    return d.toLocaleString("ja-JP");
+  }
+
+  function showReportList() {
+    reportDetailViewEl.style.display = "none";
+    reportListViewEl.style.display = "block";
+  }
+
+  async function openReportsPanel() {
+    mainViewEl.classList.add("hidden");
+    reportsPanelEl.classList.add("open");
+    toggleReportsEl.textContent = "チャットに戻る";
+    showReportList();
+    await loadReportList();
+  }
+
+  function closeReportsPanel() {
+    mainViewEl.classList.remove("hidden");
+    reportsPanelEl.classList.remove("open");
+    toggleReportsEl.textContent = "報告書一覧";
+  }
+
+  let reportsPanelOpen = false;
+  toggleReportsEl.addEventListener("click", () => {
+    reportsPanelOpen = !reportsPanelOpen;
+    if (reportsPanelOpen) {
+      openReportsPanel();
+    } else {
+      closeReportsPanel();
+    }
+  });
+
+  backToListEl.addEventListener("click", showReportList);
+
+  async function loadReportList() {
+    reportListContainerEl.innerHTML = "<div class=\"report-empty\">読み込み中...</div>";
+    try {
+      const res = await fetch("/api/reports");
+      if (!res.ok) {
+        throw new Error("リクエストに失敗しました: " + res.status);
+      }
+      const reports = await res.json();
+      renderReportList(reports);
+    } catch (err) {
+      reportListContainerEl.innerHTML =
+        "<div class=\"report-empty\">報告書の取得に失敗しました: " + err.message + "</div>";
+    }
+  }
+
+  function renderReportList(reports) {
+    if (!reports || reports.length === 0) {
+      reportListContainerEl.innerHTML = "<div class=\"report-empty\">報告書がありません</div>";
+      return;
+    }
+
+    const sorted = [...reports].sort(
+      (a, b) => new Date(b.submitted_at) - new Date(a.submitted_at)
+    );
+
+    const ul = document.createElement("ul");
+    ul.className = "report-list";
+    for (const report of sorted) {
+      const li = document.createElement("li");
+      li.className = "report-list-item";
+
+      const timeDiv = document.createElement("div");
+      timeDiv.className = "report-time";
+      timeDiv.textContent = formatTimestamp(report.submitted_at);
+      li.appendChild(timeDiv);
+
+      const previewText = (report.reply || "").slice(0, 60).replace(/\n/g, " ");
+      if (previewText) {
+        const previewDiv = document.createElement("div");
+        previewDiv.className = "report-preview";
+        previewDiv.textContent = previewText + (report.reply.length > 60 ? "..." : "");
+        li.appendChild(previewDiv);
+      }
+
+      li.addEventListener("click", () => showReportDetail(report));
+      ul.appendChild(li);
+    }
+    reportListContainerEl.innerHTML = "";
+    reportListContainerEl.appendChild(ul);
+  }
+
+  function showReportDetail(report) {
+    reportDetailEl.innerHTML = "";
+
+    const timeP = document.createElement("p");
+    timeP.innerHTML = "<strong>提出日時:</strong> " + formatTimestamp(report.submitted_at);
+    reportDetailEl.appendChild(timeP);
+
+    const fieldsHeading = document.createElement("h3");
+    fieldsHeading.textContent = "フォーム入力内容";
+    reportDetailEl.appendChild(fieldsHeading);
+
+    const table = document.createElement("table");
+    table.className = "report-fields-table";
+    const fields = report.fields || {};
+    for (const id of Object.keys(fields)) {
+      const value = fields[id];
+      if (!value) continue;
+      const tr = document.createElement("tr");
+      const tdLabel = document.createElement("td");
+      tdLabel.className = "field-label";
+      tdLabel.textContent = allLabelMap[id] || id;
+      const tdValue = document.createElement("td");
+      tdValue.style.whiteSpace = "pre-wrap";
+      tdValue.textContent = value;
+      tr.appendChild(tdLabel);
+      tr.appendChild(tdValue);
+      table.appendChild(tr);
+    }
+    reportDetailEl.appendChild(table);
+
+    const replyHeading = document.createElement("h3");
+    replyHeading.textContent = "アシスタントの生成結果";
+    reportDetailEl.appendChild(replyHeading);
+
+    const replyDiv = document.createElement("div");
+    replyDiv.className = "body";
+    replyDiv.innerHTML = marked.parse(report.reply || "");
+    reportDetailEl.appendChild(replyDiv);
+
+    reportListViewEl.style.display = "none";
+    reportDetailViewEl.style.display = "block";
+  }
 </script>
 </body>
 </html>
