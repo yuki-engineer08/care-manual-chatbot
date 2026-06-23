@@ -165,10 +165,49 @@
   #backToList {
     margin-bottom: 10px;
   }
+
+  #loginScreen {
+    max-width: 360px;
+    margin: 80px auto;
+  }
+  #loginScreen h1 {
+    text-align: center;
+  }
+  #loginError {
+    color: #c62828;
+    font-size: 13px;
+    margin-top: 6px;
+    min-height: 1em;
+  }
+  #appRoot.hidden {
+    display: none;
+  }
+  #loginScreen.hidden {
+    display: none;
+  }
+  #logoutBtn {
+    padding: 8px 14px;
+    font-size: 14px;
+    margin-right: 8px;
+  }
 </style>
 </head>
 <body>
+  <div id="loginScreen" class="panel">
+    <h1>スタッフログイン</h1>
+    <form id="loginForm">
+      <div class="field">
+        <label for="loginPassword">共有パスワード</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" />
+      </div>
+      <button id="loginSubmit" type="submit">ログイン</button>
+      <div id="loginError"></div>
+    </form>
+  </div>
+
+  <div id="appRoot" class="hidden">
   <div class="topbar">
+    <button id="logoutBtn" type="button">ログアウト</button>
     <button id="toggleReports" type="button">報告書一覧</button>
   </div>
 
@@ -268,8 +307,70 @@
       <div id="reportDetail"></div>
     </div>
   </div>
+  </div>
 
 <script>
+  // --- Sprint 7: スタッフ認証によるアクセス制限 ---
+  const loginScreenEl = document.getElementById("loginScreen");
+  const appRootEl = document.getElementById("appRoot");
+  const loginFormEl = document.getElementById("loginForm");
+  const loginPasswordEl = document.getElementById("loginPassword");
+  const loginErrorEl = document.getElementById("loginError");
+  const logoutBtnEl = document.getElementById("logoutBtn");
+
+  function showApp() {
+    loginScreenEl.classList.add("hidden");
+    appRootEl.classList.remove("hidden");
+  }
+
+  function showLogin() {
+    appRootEl.classList.add("hidden");
+    loginScreenEl.classList.remove("hidden");
+  }
+
+  async function checkSession() {
+    try {
+      const res = await fetch("/api/session");
+      if (res.ok) {
+        showApp();
+      } else {
+        showLogin();
+      }
+    } catch {
+      showLogin();
+    }
+  }
+
+  loginFormEl.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    loginErrorEl.textContent = "";
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: loginPasswordEl.value }),
+      });
+      if (!res.ok) {
+        loginErrorEl.textContent = "パスワードが正しくありません。";
+        return;
+      }
+      loginPasswordEl.value = "";
+      showApp();
+    } catch (err) {
+      loginErrorEl.textContent = "ログインに失敗しました: " + err.message;
+    }
+  });
+
+  logoutBtnEl.addEventListener("click", async () => {
+    try {
+      await fetch("/api/logout", { method: "POST" });
+    } finally {
+      showLogin();
+    }
+  });
+
+  checkSession();
+
   const chatEl = document.getElementById("chat");
   const formEl = document.getElementById("form");
   const sendEl = document.getElementById("send");
