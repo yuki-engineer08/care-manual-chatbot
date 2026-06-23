@@ -286,6 +286,14 @@
     return fieldDefs.some(([id]) => document.getElementById(id).value.trim());
   }
 
+  function collectReportFields() {
+    const fields = {};
+    for (const id of allFieldIds) {
+      fields[id] = document.getElementById(id).value;
+    }
+    return fields;
+  }
+
   function clearFields() {
     for (const [id] of fieldDefs) {
       document.getElementById(id).value = "";
@@ -297,6 +305,7 @@
     if (!hasAnyContent()) return;
 
     const text = buildReportText();
+    const reportFields = collectReportFields();
     sendEl.disabled = true;
 
     messages.push({ role: "user", content: text });
@@ -307,7 +316,7 @@
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ messages, report_fields: reportFields }),
       });
       if (!res.ok) {
         throw new Error("リクエストに失敗しました: " + res.status);
