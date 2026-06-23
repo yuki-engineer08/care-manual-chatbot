@@ -199,8 +199,45 @@
     ["afterResponse", "転倒後対応"],
     ["input", "補足・その他"],
   ];
+  const allFieldIds = [...settingIds, ...fieldDefs.map(([id]) => id)];
+  const DRAFT_KEY = "incidentReportDraft";
 
   const messages = [];
+
+  function saveDraft() {
+    const draft = {};
+    for (const id of allFieldIds) {
+      draft[id] = document.getElementById(id).value;
+    }
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  }
+
+  function loadDraft() {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    let draft;
+    try {
+      draft = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    for (const id of allFieldIds) {
+      if (Object.prototype.hasOwnProperty.call(draft, id)) {
+        document.getElementById(id).value = draft[id];
+      }
+    }
+  }
+
+  function clearDraft() {
+    localStorage.removeItem(DRAFT_KEY);
+  }
+
+  for (const id of allFieldIds) {
+    const el = document.getElementById(id);
+    el.addEventListener("input", saveDraft);
+    el.addEventListener("change", saveDraft);
+  }
+  loadDraft();
 
   function setBodyContent(body, role, content) {
     if (role === "assistant") {
@@ -265,7 +302,6 @@
     messages.push({ role: "user", content: text });
     appendMessage("user", text);
     const replyBody = appendMessage("assistant", "...");
-    clearFields();
 
     try {
       const res = await fetch("/api/chat", {
@@ -279,6 +315,8 @@
       const data = await res.json();
       messages.push({ role: "assistant", content: data.reply });
       setBodyContent(replyBody, "assistant", data.reply);
+      clearFields();
+      clearDraft();
     } catch (err) {
       setBodyContent(replyBody, "assistant", "エラーが発生しました: " + err.message);
     } finally {
