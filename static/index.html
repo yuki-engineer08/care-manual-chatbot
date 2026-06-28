@@ -2,227 +2,682 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>介護スタッフ向けチャットボット</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>事故報告書アシスト</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
-  body {
-    font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 16px;
-    background: #f5f5f5;
+/* ===== DESIGN TOKENS ===== */
+:root {
+  --color-background: #F7F4F0;
+  --color-surface: #FDFCFB;
+  --color-elevated: #FFFFFF;
+  --color-text: #231E19;
+  --color-muted: #6B6058;
+  --color-subtle: #B5ADA5;
+  --color-border: #DDD8D2;
+  --color-accent: #A34D2A;
+  --color-accent-hover: #883D20;
+  --color-accent-light: #F5E8E1;
+  --color-success: #2E7A52;
+  --color-warning: #C08700;
+  --color-danger: #B83030;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --shadow-sm: 0 1px 2px oklch(0.16 0.018 50 / 0.08);
+  --shadow-md: 0 4px 12px oklch(0.16 0.018 50 / 0.12);
+  --shadow-lg: 0 8px 32px oklch(0.16 0.018 50 / 0.18);
+  --duration-fast: 120ms;
+  --duration-base: 280ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
   }
-  h1 {
-    font-size: 20px;
-  }
-  h2 {
-    font-size: 15px;
-    margin: 16px 0 8px;
-  }
-  #chat {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    height: 45vh;
-    overflow-y: auto;
-    padding: 12px;
-    margin-bottom: 12px;
-  }
-  .msg {
-    margin-bottom: 12px;
-    white-space: pre-wrap;
-    line-height: 1.5;
-  }
-  .msg .role {
-    font-weight: bold;
-    margin-bottom: 4px;
-  }
-  .msg.user .role { color: #1565c0; }
-  .msg.assistant .role { color: #2e7d32; }
-  .msg .body > *:first-child { margin-top: 0; }
-  .msg .body > *:last-child { margin-bottom: 0; }
-  .msg .body h1,
-  .msg .body h2,
-  .msg .body h3 {
-    margin: 12px 0 6px;
-  }
-  .msg .body ul,
-  .msg .body ol {
-    margin: 6px 0;
-    padding-left: 1.4em;
-  }
+}
 
-  .panel {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 12px;
-  }
-  .field {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 10px;
-  }
-  .field label {
-    font-size: 13px;
-    font-weight: bold;
-    margin-bottom: 4px;
-  }
-  .field input,
-  .field select,
-  .field textarea {
-    padding: 8px;
-    font-size: 14px;
-    font-family: inherit;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-  .field textarea {
-    resize: vertical;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px 12px;
-  }
-  #send {
-    padding: 10px 16px;
-    width: 100%;
-    font-size: 15px;
-  }
-  #send:disabled {
-    opacity: 0.5;
-  }
+/* ===== RESET / BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  background: var(--color-background);
+  color: var(--color-text);
+  min-width: 375px;
+  overflow-x: hidden;
+}
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; }
 
-  .topbar {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 8px;
-  }
-  #toggleReports {
-    padding: 8px 14px;
-    font-size: 14px;
-  }
-  #reportsPanel {
-    display: none;
-  }
-  #reportsPanel.open {
-    display: block;
-  }
-  #mainView.hidden {
-    display: none;
-  }
-  .report-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-  .report-list-item {
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    margin-bottom: 8px;
-    cursor: pointer;
-    background: #fafafa;
-  }
-  .report-list-item:hover {
-    background: #eef3fb;
-  }
-  .report-list-item .report-time {
-    font-weight: bold;
-    font-size: 13px;
-  }
-  .report-empty {
-    color: #777;
-    padding: 12px 0;
-  }
-  #reportDetail {
-    margin-top: 12px;
-  }
-  #reportDetail h3 {
-    font-size: 14px;
-    margin: 14px 0 6px;
-  }
-  .report-fields-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-  }
-  .report-fields-table td {
-    border: 1px solid #ddd;
-    padding: 6px 8px;
-    vertical-align: top;
-  }
-  .report-fields-table td.field-label {
-    font-weight: bold;
-    width: 30%;
-    background: #f5f5f5;
-    white-space: nowrap;
-  }
-  #backToList {
-    margin-bottom: 10px;
-  }
+/* ===== HEADER ===== */
+.app-header {
+  background: var(--color-accent);
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.app-header__title {
+  font-weight: 600;
+  font-size: 16px;
+  color: #fff;
+}
 
-  #loginScreen {
-    max-width: 360px;
-    margin: 80px auto;
-  }
-  #loginScreen h1 {
-    text-align: center;
-  }
-  #loginError {
-    color: #c62828;
-    font-size: 13px;
-    margin-top: 6px;
-    min-height: 1em;
-  }
-  #appRoot.hidden {
-    display: none;
-  }
-  #loginScreen.hidden {
-    display: none;
-  }
-  #logoutBtn {
-    padding: 8px 14px;
-    font-size: 14px;
-    margin-right: 8px;
-  }
+/* ===== TAB NAV ===== */
+.tab-nav {
+  background: var(--color-elevated);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+}
+.tab-btn {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-muted);
+  min-height: 48px;
+  transition: color var(--duration-fast), border-color var(--duration-fast);
+}
+.tab-btn.active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
+/* ===== SECTION HEADER (Signature) ===== */
+.section-header {
+  background: var(--color-accent);
+  display: flex;
+  align-items: center;
+  padding: 10px var(--space-4);
+  gap: 10px;
+  margin: 0 calc(-1 * var(--space-4));
+}
+.section-header__bar {
+  width: 3px;
+  height: 20px;
+  background: var(--color-accent-light);
+  flex-shrink: 0;
+}
+.section-header__label {
+  font: 800 18px/1 'Noto Sans JP', sans-serif;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+/* ===== FORM AREA ===== */
+.form-area {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow: hidden;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field label {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text);
+}
+.field input,
+.field select,
+.field textarea {
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 16px;
+  color: var(--color-text);
+  background: var(--color-elevated);
+  outline: none;
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+  width: 100%;
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-light);
+}
+.field textarea { resize: vertical; white-space: pre-wrap; }
+.field select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B6058' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+
+/* ===== TIME PICKER TRIGGER ===== */
+.time-trigger {
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 16px;
+  background: var(--color-elevated);
+  color: var(--color-muted);
+  text-align: left;
+  min-height: 52px;
+  width: 100%;
+  cursor: pointer;
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+.time-trigger.filled { color: var(--color-text); }
+.time-trigger:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-light);
+  outline: none;
+}
+
+/* ===== VITALS BUTTON ===== */
+.vital-btn {
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 16px;
+  font-weight: 600;
+  background: var(--color-elevated);
+  color: var(--color-muted);
+  min-height: 52px;
+  width: 100%;
+  text-align: left;
+  transition: border-color var(--duration-fast), color var(--duration-fast), background var(--duration-fast);
+}
+.vital-btn:hover { border-color: var(--color-accent); }
+.vital-btn.filled {
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  font-weight: 600;
+}
+
+/* ===== SUBMIT BUTTON ===== */
+.submit-btn {
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  min-height: 52px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  transition: background var(--duration-fast);
+}
+.submit-btn:hover { background: var(--color-accent-hover); }
+.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ===== SPINNER ===== */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: none;
+}
+.loading .spinner { display: block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== AI REPLY AREA ===== */
+#replyArea {
+  display: none;
+  padding: var(--space-4);
+  padding-top: 0;
+}
+#replyArea.visible { display: block; }
+.reply-content {
+  background: var(--color-elevated);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  line-height: 1.75;
+  max-height: 60vh;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  position: relative;
+}
+.reply-content .body > *:first-child { margin-top: 0; }
+.reply-content .body > *:last-child { margin-bottom: 0; }
+.reply-content .body h1,
+.reply-content .body h2,
+.reply-content .body h3 { margin: 12px 0 6px; }
+.reply-content .body ul,
+.reply-content .body ol { margin: 6px 0; padding-left: 1.4em; }
+.copy-btn {
+  display: block;
+  margin: var(--space-3) 0 0 auto;
+  padding: var(--space-2) var(--space-3);
+  font-size: 13px;
+  font-weight: 600;
+  background: none;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-muted);
+  transition: border-color var(--duration-fast), color var(--duration-fast);
+}
+.copy-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+
+/* ===== SKELETON ===== */
+.skeleton-line {
+  height: 16px;
+  background: linear-gradient(90deg, var(--color-border) 25%, var(--color-accent-light) 50%, var(--color-border) 75%);
+  background-size: 200% 100%;
+  border-radius: var(--radius-sm);
+  animation: shimmer 1.4s infinite;
+  margin-bottom: var(--space-3);
+}
+.skeleton-line:last-child { width: 60%; margin-bottom: 0; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* ===== ERROR TOAST ===== */
+.error-toast {
+  background: var(--color-danger);
+  color: #fff;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  margin-bottom: var(--space-3);
+}
+
+/* ===== REPORTS TAB ===== */
+#tabReports { padding: var(--space-4); }
+.reports-list { list-style: none; }
+.reports-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  gap: var(--space-3);
+  min-height: 52px;
+}
+.reports-list-item:first-child { border-top: 1px solid var(--color-border); }
+.reports-list-item:hover .report-time { color: var(--color-accent); }
+.report-time {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text);
+  transition: color var(--duration-fast);
+}
+.facility-chip {
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+  border-radius: var(--radius-full);
+  padding: 3px 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.reports-empty {
+  text-align: center;
+  color: var(--color-muted);
+  padding: var(--space-12) var(--space-4);
+  font-size: 15px;
+}
+.skeleton-row {
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.skeleton-row:first-child { border-top: 1px solid var(--color-border); }
+
+/* ===== REPORT DETAIL ===== */
+#reportDetailPanel { display: none; padding: var(--space-4); }
+#reportDetailPanel.visible { display: block; }
+#tabReports.detail-open { display: none; }
+.back-btn {
+  background: none;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-muted);
+  min-height: 44px;
+  margin-bottom: var(--space-4);
+  transition: border-color var(--duration-fast), color var(--duration-fast);
+}
+.back-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.detail-meta {
+  font-size: 13px;
+  color: var(--color-muted);
+  margin-bottom: var(--space-4);
+  line-height: 1.6;
+}
+.detail-body {
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  line-height: 1.75;
+}
+.detail-body > *:first-child { margin-top: 0; }
+.detail-body > *:last-child { margin-bottom: 0; }
+.detail-body h1, .detail-body h2, .detail-body h3 { margin: 12px 0 6px; }
+.detail-body ul, .detail-body ol { margin: 6px 0; padding-left: 1.4em; }
+
+/* ===== OVERLAY BACKDROP ===== */
+.overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: oklch(0.16 0.018 50 / 0.4);
+  z-index: 200;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+.overlay-backdrop.visible { opacity: 1; }
+
+/* ===== TIME PICKER OVERLAY ===== */
+.time-picker-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-elevated);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  z-index: 300;
+  transform: translateY(100%);
+  transition: transform var(--duration-base) var(--ease-out);
+  padding: var(--space-4);
+  padding-bottom: max(var(--space-6), env(safe-area-inset-bottom));
+}
+.time-picker-sheet.open { transform: translateY(0); }
+.time-picker-title {
+  font-weight: 800;
+  font-size: 16px;
+  text-align: center;
+  margin-bottom: var(--space-4);
+  color: var(--color-text);
+}
+.drum-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  position: relative;
+  height: 260px;
+}
+.drum-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.drum-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
+  margin-bottom: var(--space-2);
+}
+.drum-sep {
+  font: 700 36px/1 'Noto Sans JP', sans-serif;
+  color: var(--color-accent);
+  align-self: center;
+  padding-top: 24px; /* offset for label */
+}
+.drum-scroll-wrap {
+  position: relative;
+  width: 72px;
+  height: 208px;
+  overflow: hidden;
+}
+.drum-highlight {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 52px;
+  transform: translateY(-50%);
+  background: var(--color-accent-light);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  pointer-events: none;
+  z-index: 1;
+}
+.drum-scroll {
+  height: 100%;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  position: relative;
+}
+.drum-scroll::-webkit-scrollbar { display: none; }
+.drum-item {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: center;
+  font: 400 24px/1 'Noto Sans JP', sans-serif;
+  color: var(--color-muted);
+  transition: font-size var(--duration-fast), color var(--duration-fast);
+  user-select: none;
+}
+.drum-item.selected {
+  font: 700 36px/1 'Noto Sans JP', sans-serif;
+  color: var(--color-accent);
+}
+.picker-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+.picker-cancel {
+  flex: 1;
+  min-height: 52px;
+  background: none;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+.picker-confirm {
+  flex: 1;
+  min-height: 52px;
+  background: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+.picker-confirm:hover { background: var(--color-accent-hover); }
+
+/* ===== VITAL DIALOG ===== */
+.vital-dialog {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-elevated);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  z-index: 300;
+  transform: translateY(100%);
+  transition: transform var(--duration-base) var(--ease-out);
+  padding: var(--space-4);
+  padding-bottom: max(var(--space-6), env(safe-area-inset-bottom));
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.vital-dialog.open { transform: translateY(0); }
+.vital-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+.vital-dialog-title {
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--color-text);
+}
+.vital-close-btn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: var(--color-muted);
+  line-height: 1;
+  padding: var(--space-1);
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vital-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.vital-group {
+  margin-bottom: var(--space-4);
+}
+.vital-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.vital-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+.vital-col-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+.vital-unit {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-muted);
+  align-self: center;
+  padding-bottom: 4px;
+}
+.vital-sep {
+  font: 700 24px/1 'Noto Sans JP', sans-serif;
+  color: var(--color-accent);
+  align-self: center;
+  padding-bottom: 4px;
+}
+/* Drum in dialog — compact */
+.drum-scroll-wrap-sm {
+  position: relative;
+  width: 52px;
+  height: 144px;
+  overflow: hidden;
+}
+.drum-scroll-wrap-sm .drum-highlight {
+  height: 48px;
+}
+.drum-scroll-sm {
+  height: 100%;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.drum-scroll-sm::-webkit-scrollbar { display: none; }
+.drum-item-sm {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: center;
+  font: 400 20px/1 'Noto Sans JP', sans-serif;
+  color: var(--color-muted);
+  user-select: none;
+}
+.drum-item-sm.selected {
+  font: 700 28px/1 'Noto Sans JP', sans-serif;
+  color: var(--color-accent);
+}
 </style>
 </head>
 <body>
-  <div id="loginScreen" class="panel">
-    <h1>スタッフログイン</h1>
-    <form id="loginForm">
-      <div class="field">
-        <label for="loginPassword">共有パスワード</label>
-        <input id="loginPassword" type="password" autocomplete="current-password" />
-      </div>
-      <button id="loginSubmit" type="submit">ログイン</button>
-      <div id="loginError"></div>
-    </form>
-  </div>
 
-  <div id="appRoot" class="hidden">
-  <div class="topbar">
-    <button id="logoutBtn" type="button">ログアウト</button>
-    <button id="toggleReports" type="button">報告書一覧</button>
-  </div>
+<header class="app-header">
+  <span class="app-header__title">事故報告書アシスト</span>
+</header>
 
-  <div id="mainView">
-  <h1>介護スタッフ向けチャットボット（事故報告支援）</h1>
+<nav class="tab-nav" role="tablist">
+  <button class="tab-btn active" id="tabBtnCreate" role="tab" aria-selected="true" aria-controls="tabCreate">報告書を作成</button>
+  <button class="tab-btn" id="tabBtnReports" role="tab" aria-selected="false" aria-controls="tabReports">過去の報告書</button>
+</nav>
 
-  <div id="chat"></div>
+<!-- TAB A: 報告書を作成 -->
+<div id="tabCreate" role="tabpanel">
+  <form id="reportForm">
+    <div class="form-area">
 
-  <form id="form">
-    <div class="panel">
-      <h2>利用者・施設条件</h2>
-      <div class="grid">
+      <!-- セクション1: 施設情報 -->
+      <div class="form-section">
+        <div class="section-header">
+          <span class="section-header__bar"></span>
+          <span class="section-header__label">施設情報</span>
+        </div>
+        <div class="field">
+          <label for="facilityType">施設形態</label>
+          <select id="facilityType" name="facilityType">
+            <option value="">選択してください</option>
+            <option value="グループホーム">グループホーム</option>
+            <option value="特別養護老人ホーム">特別養護老人ホーム</option>
+            <option value="介護老人保健施設">介護老人保健施設</option>
+            <option value="デイサービス">デイサービス</option>
+            <option value="自宅">自宅</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fallRisk">転倒リスク</label>
+          <select id="fallRisk" name="fallRisk">
+            <option value="">選択してください</option>
+            <option value="小">小（要支援1〜2相当）</option>
+            <option value="中">中（要介護1〜2相当）</option>
+            <option value="高">高（要介護3〜5相当）</option>
+          </select>
+        </div>
         <div class="field">
           <label for="adl">利用者ADL</label>
-          <select id="adl">
+          <select id="adl" name="adl">
+            <option value="">選択してください</option>
             <option value="自立">自立</option>
             <option value="一部介助">一部介助</option>
             <option value="全介助">全介助</option>
@@ -230,448 +685,842 @@
         </div>
         <div class="field">
           <label for="dementia">認知症の有無</label>
-          <select id="dementia">
+          <select id="dementia" name="dementia">
+            <option value="">選択してください</option>
             <option value="あり">あり</option>
             <option value="なし">なし</option>
           </select>
         </div>
-        <div class="field">
-          <label for="fallRisk">転倒リスク評価</label>
-          <select id="fallRisk">
-            <option value="高">高</option>
-            <option value="中">中</option>
-            <option value="低">低</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="facilityType">施設種別</label>
-          <select id="facilityType">
-            <option value="特養">特養</option>
-            <option value="老健">老健</option>
-            <option value="グループホーム">グループホーム</option>
-            <option value="その他">その他</option>
-          </select>
-        </div>
       </div>
-    </div>
 
-    <div class="panel">
-      <h2>事故発見時の状況</h2>
-      <div class="grid">
-        <div class="field">
-          <label for="time">何時</label>
-          <input id="time" type="text" placeholder="例: 14時30分頃" />
+      <!-- セクション2: 時刻・事故内容 -->
+      <div class="form-section">
+        <div class="section-header">
+          <span class="section-header__bar"></span>
+          <span class="section-header__label">時刻・事故内容</span>
         </div>
         <div class="field">
-          <label for="place">どこで</label>
-          <input id="place" type="text" placeholder="例: 居室、トイレ前" />
+          <label>事故発生時刻</label>
+          <button type="button" class="time-trigger" id="timeTrigger" aria-haspopup="dialog">--:--</button>
+          <input type="hidden" id="time" name="time" value="">
+        </div>
+        <div class="field">
+          <label for="place">発生場所</label>
+          <input id="place" name="place" type="text" placeholder="例: 居室、トイレ前">
+        </div>
+        <div class="field">
+          <label for="fallResponse">事故内容</label>
+          <textarea id="fallResponse" name="fallResponse" rows="3" placeholder="事故発見時の状況・発生経緯を記入してください"></textarea>
+        </div>
+        <div class="field">
+          <label for="statement">利用者の発言</label>
+          <textarea id="statement" name="statement" rows="2" placeholder="利用者本人の発言内容"></textarea>
+        </div>
+        <div class="field">
+          <label for="injury">外傷・可動域の変化</label>
+          <textarea id="injury" name="injury" rows="2" placeholder="外傷の有無、可動域の変化など"></textarea>
         </div>
       </div>
-      <div class="field">
-        <label for="fallResponse">転倒時対応</label>
-        <textarea id="fallResponse" rows="2" placeholder="発見時に行った対応"></textarea>
-      </div>
-      <div class="field">
-        <label for="vitals">バイタル</label>
-        <textarea id="vitals" rows="2" placeholder="血圧・脈拍・体温・SpO2など"></textarea>
-      </div>
-      <div class="field">
-        <label for="statement">発言</label>
-        <textarea id="statement" rows="2" placeholder="利用者本人の発言内容"></textarea>
-      </div>
-      <div class="field">
-        <label for="injury">外傷・可動域の変化</label>
-        <textarea id="injury" rows="2" placeholder="外傷の有無、可動域の変化など"></textarea>
-      </div>
-      <div class="field">
-        <label for="afterResponse">転倒後対応</label>
-        <textarea id="afterResponse" rows="2" placeholder="その後の対応・報告・受診状況など"></textarea>
-      </div>
-      <div class="field">
-        <label for="input">補足・その他</label>
-        <textarea id="input" rows="4" placeholder="その他、補足したい内容があれば入力してください"></textarea>
-      </div>
-    </div>
 
-    <button id="send" type="submit">送信</button>
+      <!-- セクション3: バイタル -->
+      <div class="form-section">
+        <div class="section-header">
+          <span class="section-header__bar"></span>
+          <span class="section-header__label">バイタルサイン</span>
+        </div>
+        <div class="field">
+          <button type="button" class="vital-btn" id="vitalBtn">バイタルを入力</button>
+        </div>
+        <div class="field">
+          <label for="afterResponse">事故後対応</label>
+          <textarea id="afterResponse" name="afterResponse" rows="3" placeholder="事故後に行った対応・報告・受診状況など"></textarea>
+        </div>
+        <div class="field">
+          <label for="notes">補足・その他</label>
+          <textarea id="notes" name="notes" rows="3" placeholder="その他、補足したい内容があれば入力してください"></textarea>
+        </div>
+      </div>
+
+      <!-- セクション4: 送信 -->
+      <div class="form-section">
+        <div class="section-header">
+          <span class="section-header__bar"></span>
+          <span class="section-header__label">報告書を生成</span>
+        </div>
+        <button type="submit" class="submit-btn" id="submitBtn">
+          <span class="spinner" id="submitSpinner"></span>
+          <span id="submitBtnLabel">報告書を生成</span>
+        </button>
+      </div>
+
+    </div><!-- /form-area -->
   </form>
+
+  <!-- AI返信エリア -->
+  <div id="replyArea">
+    <div class="form-area" style="padding-top:0">
+      <div class="form-section">
+        <div class="section-header">
+          <span class="section-header__bar"></span>
+          <span class="section-header__label">報告書（案）</span>
+        </div>
+        <div class="reply-content">
+          <div id="replyBody" class="body"></div>
+        </div>
+        <button type="button" class="copy-btn" id="copyBtn">コピー</button>
+      </div>
+    </div>
+  </div>
+</div><!-- /tabCreate -->
+
+<!-- TAB B: 過去の報告書 -->
+<div id="tabReportsPanel" role="tabpanel" style="display:none">
+  <div class="form-area">
+    <div id="reportListArea"></div>
+  </div>
+</div>
+
+<!-- 報告書詳細パネル -->
+<div id="reportDetailPanel">
+  <div class="form-area">
+    <button type="button" class="back-btn" id="backBtn">← 一覧に戻る</button>
+    <div class="form-section">
+      <div class="section-header">
+        <span class="section-header__bar"></span>
+        <span class="section-header__label">報告書詳細</span>
+      </div>
+      <div class="detail-meta" id="detailMeta"></div>
+      <div class="detail-body" id="detailBody"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TIME PICKER ===== -->
+<div class="overlay-backdrop" id="timeBackdrop" aria-hidden="true"></div>
+<div class="time-picker-sheet" id="timePicker" role="dialog" aria-modal="true" aria-label="時刻を選択" aria-hidden="true">
+  <div class="time-picker-title">時刻を選択</div>
+  <div class="drum-row">
+    <div class="drum-col">
+      <div class="drum-label">時</div>
+      <div class="drum-scroll-wrap">
+        <div class="drum-highlight"></div>
+        <div class="drum-scroll" id="hourDrum"></div>
+      </div>
+    </div>
+    <div class="drum-sep" style="padding-top:30px">:</div>
+    <div class="drum-col">
+      <div class="drum-label">分</div>
+      <div class="drum-scroll-wrap">
+        <div class="drum-highlight"></div>
+        <div class="drum-scroll" id="minuteDrum"></div>
+      </div>
+    </div>
+  </div>
+  <div class="picker-actions">
+    <button type="button" class="picker-cancel" id="timeCancel">キャンセル</button>
+    <button type="button" class="picker-confirm" id="timeConfirm">確定</button>
+  </div>
+</div>
+
+<!-- ===== VITAL DIALOG ===== -->
+<div class="overlay-backdrop" id="vitalBackdrop" aria-hidden="true"></div>
+<div class="vital-dialog" id="vitalDialog" role="dialog" aria-modal="true" aria-label="バイタルサインを入力" aria-hidden="true">
+  <div class="vital-dialog-header">
+    <span class="vital-dialog-title">バイタルサイン</span>
+    <button type="button" class="vital-close-btn" id="vitalCloseBtn" aria-label="閉じる">×</button>
   </div>
 
-  <div id="reportsPanel" class="panel">
-    <div id="reportListView">
-      <h2>保存済み報告書一覧</h2>
-      <div id="reportListContainer"></div>
-    </div>
-    <div id="reportDetailView" style="display:none;">
-      <button id="backToList" type="button">← 一覧に戻る</button>
-      <div id="reportDetail"></div>
+  <!-- 血圧・脈拍 -->
+  <div class="vital-group">
+    <div class="vital-section-label">血圧・脈拍</div>
+    <div class="vital-row">
+      <div class="vital-col">
+        <div class="vital-col-label">収縮期</div>
+        <div class="drum-scroll-wrap-sm">
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-scroll-sm" id="bpSys1"></div>
+        </div>
+      </div>
+      <div class="vital-col">
+        <div class="vital-col-label">&nbsp;</div>
+        <div class="drum-scroll-wrap-sm">
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-scroll-sm" id="bpSys2"></div>
+        </div>
+      </div>
+      <div class="vital-col">
+        <div class="vital-col-label">&nbsp;</div>
+        <div class="drum-scroll-wrap-sm">
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-scroll-sm" id="bpSys3"></div>
+        </div>
+      </div>
+      <div class="vital-sep">/</div>
+      <div class="vital-col">
+        <div class="vital-col-label">拡張期</div>
+        <div class="drum-scroll-wrap-sm">
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-scroll-sm" id="bpDia1"></div>
+        </div>
+      </div>
+      <div class="vital-col">
+        <div class="vital-col-label">&nbsp;</div>
+        <div class="drum-scroll-wrap-sm">
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-scroll-sm" id="bpDia2"></div>
+        </div>
+      </div>
+      <div class="vital-col">
+        <div class="vital-col-label">&nbsp;</div>
+        <div class="drum-scroll-wrap-sm">
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-scroll-sm" id="bpDia3"></div>
+        </div>
+      </div>
+      <div class="vital-unit">mmHg</div>
+      <div class="vital-col" style="margin-left:var(--space-3)">
+        <div class="vital-col-label">脈拍</div>
+        <div class="drum-scroll-wrap-sm">
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-scroll-sm" id="hr1"></div>
+        </div>
+      </div>
+      <div class="vital-col">
+        <div class="vital-col-label">&nbsp;</div>
+        <div class="drum-scroll-wrap-sm">
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-scroll-sm" id="hr2"></div>
+        </div>
+      </div>
+      <div class="vital-col">
+        <div class="vital-col-label">&nbsp;</div>
+        <div class="drum-scroll-wrap-sm">
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-scroll-sm" id="hr3"></div>
+        </div>
+      </div>
+      <div class="vital-unit">回/分</div>
     </div>
   </div>
+
+  <!-- 体温 -->
+  <div class="vital-group">
+    <div class="vital-section-label">体温</div>
+    <div class="vital-row">
+      <div class="vital-col">
+        <div class="vital-col-label">整数部（30〜42）</div>
+        <div class="drum-scroll-wrap-sm" style="width:64px">
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-scroll-sm" id="tempInt"></div>
+        </div>
+      </div>
+      <div class="vital-sep">.</div>
+      <div class="vital-col">
+        <div class="vital-col-label">小数部（0〜9）</div>
+        <div class="drum-scroll-wrap-sm">
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-scroll-sm" id="tempDec"></div>
+        </div>
+      </div>
+      <div class="vital-unit">℃</div>
+    </div>
   </div>
+
+  <!-- SpO2 -->
+  <div class="vital-group">
+    <div class="vital-section-label">SpO2（80〜100%）</div>
+    <div class="vital-row">
+      <div class="vital-col">
+        <div class="vital-col-label">百</div>
+        <div class="drum-scroll-wrap-sm">
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-scroll-sm" id="spo2d1"></div>
+        </div>
+      </div>
+      <div class="vital-col">
+        <div class="vital-col-label">十</div>
+        <div class="drum-scroll-wrap-sm">
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-scroll-sm" id="spo2d2"></div>
+        </div>
+      </div>
+      <div class="vital-col">
+        <div class="vital-col-label">一</div>
+        <div class="drum-scroll-wrap-sm">
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-scroll-sm" id="spo2d3"></div>
+        </div>
+      </div>
+      <div class="vital-unit">%</div>
+    </div>
+  </div>
+
+  <div class="picker-actions">
+    <button type="button" class="picker-cancel" id="vitalCancel">キャンセル</button>
+    <button type="button" class="picker-confirm" id="vitalConfirm">確定</button>
+  </div>
+</div>
 
 <script>
-  // --- Sprint 7: スタッフ認証によるアクセス制限 ---
-  const loginScreenEl = document.getElementById("loginScreen");
-  const appRootEl = document.getElementById("appRoot");
-  const loginFormEl = document.getElementById("loginForm");
-  const loginPasswordEl = document.getElementById("loginPassword");
-  const loginErrorEl = document.getElementById("loginError");
-  const logoutBtnEl = document.getElementById("logoutBtn");
+// ===== UTILITIES =====
+function $(id) { return document.getElementById(id); }
 
-  function showApp() {
-    loginScreenEl.classList.add("hidden");
-    appRootEl.classList.remove("hidden");
+// ===== TAB SWITCHING =====
+const tabCreate = $('tabCreate');
+const tabReportsPanel = $('tabReportsPanel');
+const tabBtnCreate = $('tabBtnCreate');
+const tabBtnReports = $('tabBtnReports');
+const reportDetailPanel = $('reportDetailPanel');
+
+function switchTab(which) {
+  if (which === 'create') {
+    tabCreate.style.display = '';
+    tabReportsPanel.style.display = 'none';
+    reportDetailPanel.classList.remove('visible');
+    tabBtnCreate.classList.add('active');
+    tabBtnCreate.setAttribute('aria-selected', 'true');
+    tabBtnReports.classList.remove('active');
+    tabBtnReports.setAttribute('aria-selected', 'false');
+  } else {
+    tabCreate.style.display = 'none';
+    tabReportsPanel.style.display = '';
+    reportDetailPanel.classList.remove('visible');
+    tabBtnCreate.classList.remove('active');
+    tabBtnCreate.setAttribute('aria-selected', 'false');
+    tabBtnReports.classList.add('active');
+    tabBtnReports.setAttribute('aria-selected', 'true');
+    loadReportList();
   }
+}
 
-  function showLogin() {
-    appRootEl.classList.add("hidden");
-    loginScreenEl.classList.remove("hidden");
-  }
+tabBtnCreate.addEventListener('click', () => switchTab('create'));
+tabBtnReports.addEventListener('click', () => switchTab('reports'));
 
-  async function checkSession() {
-    try {
-      const res = await fetch("/api/session");
-      if (res.ok) {
-        showApp();
-      } else {
-        showLogin();
-      }
-    } catch {
-      showLogin();
-    }
-  }
+// ===== DRAFT SAVE (Sprint 4) =====
+const DRAFT_KEY = 'incidentReportDraft';
+const draftFieldIds = ['facilityType','fallRisk','adl','dementia','time','place','fallResponse','statement','injury','afterResponse','notes'];
 
-  loginFormEl.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    loginErrorEl.textContent = "";
-    try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: loginPasswordEl.value }),
-      });
-      if (!res.ok) {
-        loginErrorEl.textContent = "パスワードが正しくありません。";
-        return;
-      }
-      loginPasswordEl.value = "";
-      showApp();
-    } catch (err) {
-      loginErrorEl.textContent = "ログインに失敗しました: " + err.message;
-    }
-  });
-
-  logoutBtnEl.addEventListener("click", async () => {
-    try {
-      await fetch("/api/logout", { method: "POST" });
-    } finally {
-      showLogin();
-    }
-  });
-
-  checkSession();
-
-  const chatEl = document.getElementById("chat");
-  const formEl = document.getElementById("form");
-  const sendEl = document.getElementById("send");
-
-  const settingIds = ["adl", "dementia", "fallRisk", "facilityType"];
-  const fieldDefs = [
-    ["time", "何時"],
-    ["place", "どこで"],
-    ["fallResponse", "転倒時対応"],
-    ["vitals", "バイタル"],
-    ["statement", "発言"],
-    ["injury", "外傷・可動域の変化"],
-    ["afterResponse", "転倒後対応"],
-    ["input", "補足・その他"],
-  ];
-  const allFieldIds = [...settingIds, ...fieldDefs.map(([id]) => id)];
-  const DRAFT_KEY = "incidentReportDraft";
-
-  const messages = [];
-
-  function saveDraft() {
+function saveDraft() {
+  try {
     const draft = {};
-    for (const id of allFieldIds) {
-      draft[id] = document.getElementById(id).value;
+    for (const id of draftFieldIds) {
+      const el = $(id);
+      if (el) draft[id] = el.value;
     }
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  }
+  } catch {}
+}
 
-  function loadDraft() {
+function loadDraft() {
+  try {
     const raw = localStorage.getItem(DRAFT_KEY);
     if (!raw) return;
-    let draft;
-    try {
-      draft = JSON.parse(raw);
-    } catch {
-      return;
-    }
-    for (const id of allFieldIds) {
-      if (Object.prototype.hasOwnProperty.call(draft, id)) {
-        document.getElementById(id).value = draft[id];
+    const draft = JSON.parse(raw);
+    for (const id of draftFieldIds) {
+      if (Object.prototype.hasOwnProperty.call(draft, id) && $(id)) {
+        $(id).value = draft[id];
       }
     }
-  }
-
-  function clearDraft() {
-    localStorage.removeItem(DRAFT_KEY);
-  }
-
-  for (const id of allFieldIds) {
-    const el = document.getElementById(id);
-    el.addEventListener("input", saveDraft);
-    el.addEventListener("change", saveDraft);
-  }
-  loadDraft();
-
-  function setBodyContent(body, role, content) {
-    if (role === "assistant") {
-      body.innerHTML = marked.parse(content);
-    } else {
-      body.textContent = content;
+    // Restore time display
+    const t = draft['time'];
+    if (t) {
+      $('timeTrigger').textContent = t;
+      $('timeTrigger').classList.add('filled');
     }
+  } catch {}
+}
+
+function clearDraft() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch {}
+}
+
+// attach save listeners
+for (const id of draftFieldIds) {
+  const el = $(id);
+  if (el) {
+    el.addEventListener('input', saveDraft);
+    el.addEventListener('change', saveDraft);
   }
+}
+loadDraft();
 
-  function appendMessage(role, content) {
-    const div = document.createElement("div");
-    div.className = "msg " + role;
-    const roleLabel = document.createElement("div");
-    roleLabel.className = "role";
-    roleLabel.textContent = role === "user" ? "あなた" : "アシスタント";
-    const body = document.createElement("div");
-    body.className = "body";
-    setBodyContent(body, role, content);
-    div.appendChild(roleLabel);
-    div.appendChild(body);
-    chatEl.appendChild(div);
-    chatEl.scrollTop = chatEl.scrollHeight;
-    return body;
-  }
+// ===== DRUM ROLL HELPERS =====
+function buildDrumItems(container, values, itemClass, initIndex) {
+  // padding items so center snap works
+  const padTop = document.createElement('div');
+  padTop.className = itemClass;
+  padTop.style.visibility = 'hidden';
+  padTop.setAttribute('aria-hidden','true');
+  container.appendChild(padTop);
 
-  function buildReportText() {
-    const lines = [];
+  values.forEach((v, i) => {
+    const div = document.createElement('div');
+    div.className = itemClass + (i === initIndex ? ' selected' : '');
+    div.textContent = v;
+    container.appendChild(div);
+  });
 
-    lines.push("【利用者・施設条件】");
-    lines.push("利用者ADL: " + document.getElementById("adl").value);
-    lines.push("認知症の有無: " + document.getElementById("dementia").value);
-    lines.push("転倒リスク評価: " + document.getElementById("fallRisk").value);
-    lines.push("施設種別: " + document.getElementById("facilityType").value);
-    lines.push("");
-    lines.push("【事故発見時の状況】");
-    for (const [id, label] of fieldDefs) {
-      const value = document.getElementById(id).value.trim();
-      if (value) {
-        lines.push(label + ": " + value);
-      }
+  const padBot = document.createElement('div');
+  padBot.className = itemClass;
+  padBot.style.visibility = 'hidden';
+  padBot.setAttribute('aria-hidden','true');
+  container.appendChild(padBot);
+}
+
+function syncSelected(container, itemClass, itemHeight) {
+  const items = container.querySelectorAll('.' + itemClass + ':not([aria-hidden])');
+  const scrollTop = container.scrollTop;
+  const center = scrollTop + container.clientHeight / 2;
+  let closestIdx = 0;
+  let closestDist = Infinity;
+  items.forEach((item, i) => {
+    const itemCenter = item.offsetTop + itemHeight / 2;
+    const dist = Math.abs(center - itemCenter);
+    if (dist < closestDist) {
+      closestDist = dist;
+      closestIdx = i;
     }
-    return lines.join("\n");
+  });
+  items.forEach((item, i) => {
+    item.classList.toggle('selected', i === closestIdx);
+  });
+  return closestIdx;
+}
+
+function getSelectedIndex(container, itemClass) {
+  const items = container.querySelectorAll('.' + itemClass + ':not([aria-hidden])');
+  let idx = 0;
+  items.forEach((item, i) => { if (item.classList.contains('selected')) idx = i; });
+  return idx;
+}
+
+function scrollToIndex(container, index, itemHeight, animated) {
+  // items start after first padding item
+  const targetScrollTop = (index + 1) * itemHeight - container.clientHeight / 2 + itemHeight / 2;
+  if (animated) {
+    container.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+  } else {
+    container.scrollTop = targetScrollTop;
   }
+}
 
-  function hasAnyContent() {
-    return fieldDefs.some(([id]) => document.getElementById(id).value.trim());
+// ===== TIME PICKER =====
+const timeBackdrop = $('timeBackdrop');
+const timePicker = $('timePicker');
+const hourDrum = $('hourDrum');
+const minuteDrum = $('minuteDrum');
+const ITEM_H = 52;
+
+// Build hour (00-23) and minute (00-59) lists
+const hours = Array.from({length:24}, (_,i) => String(i).padStart(2,'0'));
+const minutes = Array.from({length:60}, (_,i) => String(i).padStart(2,'0'));
+
+buildDrumItems(hourDrum, hours, 'drum-item', 0);
+buildDrumItems(minuteDrum, minutes, 'drum-item', 0);
+
+// Scroll sync on scroll
+function onDrumScroll(drum) {
+  syncSelected(drum, 'drum-item', ITEM_H);
+}
+hourDrum.addEventListener('scroll', () => onDrumScroll(hourDrum), {passive:true});
+minuteDrum.addEventListener('scroll', () => onDrumScroll(minuteDrum), {passive:true});
+
+// Snap on scroll end
+let hourScrollTimer, minuteScrollTimer;
+hourDrum.addEventListener('scroll', () => {
+  clearTimeout(hourScrollTimer);
+  hourScrollTimer = setTimeout(() => {
+    const idx = getSelectedIndex(hourDrum, 'drum-item');
+    scrollToIndex(hourDrum, idx, ITEM_H, true);
+  }, 150);
+}, {passive:true});
+minuteDrum.addEventListener('scroll', () => {
+  clearTimeout(minuteScrollTimer);
+  minuteScrollTimer = setTimeout(() => {
+    const idx = getSelectedIndex(minuteDrum, 'drum-item');
+    scrollToIndex(minuteDrum, idx, ITEM_H, true);
+  }, 150);
+}, {passive:true});
+
+function openTimePicker() {
+  // Pre-set to current time
+  const now = new Date();
+  const hIdx = now.getHours();
+  const mIdx = now.getMinutes();
+  // If time already set, parse it
+  const current = $('time').value;
+  let ph = hIdx, pm = mIdx;
+  if (current && current.includes(':')) {
+    const parts = current.split(':');
+    ph = parseInt(parts[0], 10) || 0;
+    pm = parseInt(parts[1], 10) || 0;
   }
+  timeBackdrop.classList.add('visible');
+  timePicker.classList.add('open');
+  timePicker.setAttribute('aria-hidden','false');
+  timeBackdrop.setAttribute('aria-hidden','false');
+  document.body.style.overflow = 'hidden';
 
-  function collectReportFields() {
-    const fields = {};
-    for (const id of allFieldIds) {
-      fields[id] = document.getElementById(id).value;
-    }
-    return fields;
+  // Scroll after open (need layout)
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      scrollToIndex(hourDrum, ph, ITEM_H, false);
+      scrollToIndex(minuteDrum, pm, ITEM_H, false);
+      syncSelected(hourDrum, 'drum-item', ITEM_H);
+      syncSelected(minuteDrum, 'drum-item', ITEM_H);
+      $('timeConfirm').focus();
+    });
+  });
+}
+
+function closeTimePicker(confirm) {
+  if (confirm) {
+    const hIdx = getSelectedIndex(hourDrum, 'drum-item');
+    const mIdx = getSelectedIndex(minuteDrum, 'drum-item');
+    const h = String(hIdx).padStart(2,'0');
+    const m = String(mIdx).padStart(2,'0');
+    const val = h + ':' + m;
+    $('time').value = val;
+    $('timeTrigger').textContent = val;
+    $('timeTrigger').classList.add('filled');
+    saveDraft();
   }
+  timeBackdrop.classList.remove('visible');
+  timePicker.classList.remove('open');
+  timePicker.setAttribute('aria-hidden','true');
+  timeBackdrop.setAttribute('aria-hidden','true');
+  document.body.style.overflow = '';
+  $('timeTrigger').focus();
+}
 
-  function clearFields() {
-    for (const [id] of fieldDefs) {
-      document.getElementById(id).value = "";
-    }
+$('timeTrigger').addEventListener('click', openTimePicker);
+$('timeCancel').addEventListener('click', () => closeTimePicker(false));
+$('timeConfirm').addEventListener('click', () => closeTimePicker(true));
+timeBackdrop.addEventListener('click', () => closeTimePicker(false));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (timePicker.classList.contains('open')) closeTimePicker(false);
+    if (vitalDialog.classList.contains('open')) closeVitalDialog(false);
   }
+});
 
-  formEl.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (!hasAnyContent()) return;
+// ===== VITAL SIGNS DIALOG =====
+const vitalDialog = $('vitalDialog');
+const vitalBackdrop = $('vitalBackdrop');
+const ITEM_H_SM = 48;
 
-    const text = buildReportText();
-    const reportFields = collectReportFields();
-    sendEl.disabled = true;
+// Drum definitions: [elementId, values, defaultIndex]
+const vitalDrums = [
+  ['bpSys1', Array.from({length:3},(_,i)=>String(i)), 1],   // 0-2, default 1
+  ['bpSys2', Array.from({length:10},(_,i)=>String(i)), 2],  // default 2
+  ['bpSys3', Array.from({length:10},(_,i)=>String(i)), 0],  // default 0 → 120
+  ['bpDia1', Array.from({length:2},(_,i)=>String(i)), 0],   // 0-1
+  ['bpDia2', Array.from({length:10},(_,i)=>String(i)), 8],  // default 8
+  ['bpDia3', Array.from({length:10},(_,i)=>String(i)), 0],  // default 0 → 080
+  ['hr1',    Array.from({length:3},(_,i)=>String(i)), 0],
+  ['hr2',    Array.from({length:10},(_,i)=>String(i)), 7],  // default 7
+  ['hr3',    Array.from({length:10},(_,i)=>String(i)), 0],  // → 070
+  ['tempInt',Array.from({length:13},(_,i)=>String(30+i)), 6], // 30-42, default 36
+  ['tempDec',Array.from({length:10},(_,i)=>String(i)), 5],  // 0-9, default 5 → 36.5
+  ['spo2d1', ['0','1'], 1],   // default 1 → 100
+  ['spo2d2', Array.from({length:10},(_,i)=>String(i)), 0],
+  ['spo2d3', Array.from({length:10},(_,i)=>String(i)), 0],
+];
 
-    messages.push({ role: "user", content: text });
-    appendMessage("user", text);
-    const replyBody = appendMessage("assistant", "...");
+vitalDrums.forEach(([id, vals, initIdx]) => {
+  buildDrumItems($(id), vals, 'drum-item-sm', initIdx);
+  const el = $(id);
+  el.addEventListener('scroll', () => syncSelected(el, 'drum-item-sm', ITEM_H_SM), {passive:true});
+  let timer;
+  el.addEventListener('scroll', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const idx = getSelectedIndex(el, 'drum-item-sm');
+      scrollToIndex(el, idx, ITEM_H_SM, true);
+    }, 150);
+  }, {passive:true});
+});
 
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages, report_fields: reportFields }),
+let vitalConfirmed = false;
+let vitalData = null;
+
+function openVitalDialog() {
+  vitalBackdrop.classList.add('visible');
+  vitalDialog.classList.add('open');
+  vitalDialog.setAttribute('aria-hidden','false');
+  vitalBackdrop.setAttribute('aria-hidden','false');
+  document.body.style.overflow = 'hidden';
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      vitalDrums.forEach(([id, vals, initIdx]) => {
+        const el = $(id);
+        // If already confirmed, restore current values
+        scrollToIndex(el, initIdx, ITEM_H_SM, false);
+        syncSelected(el, 'drum-item-sm', ITEM_H_SM);
       });
-      if (!res.ok) {
-        throw new Error("リクエストに失敗しました: " + res.status);
-      }
-      const data = await res.json();
-      messages.push({ role: "assistant", content: data.reply });
-      setBodyContent(replyBody, "assistant", data.reply);
-      clearFields();
-      clearDraft();
-    } catch (err) {
-      setBodyContent(replyBody, "assistant", "エラーが発生しました: " + err.message);
-    } finally {
-      sendEl.disabled = false;
-    }
+      $('vitalConfirm').focus();
+    });
   });
+}
 
-  // --- Sprint 6: 報告書一覧・詳細表示 ---
-  const mainViewEl = document.getElementById("mainView");
-  const reportsPanelEl = document.getElementById("reportsPanel");
-  const toggleReportsEl = document.getElementById("toggleReports");
-  const reportListViewEl = document.getElementById("reportListView");
-  const reportDetailViewEl = document.getElementById("reportDetailView");
-  const reportListContainerEl = document.getElementById("reportListContainer");
-  const reportDetailEl = document.getElementById("reportDetail");
-  const backToListEl = document.getElementById("backToList");
+function closeVitalDialog(confirm) {
+  if (confirm) {
+    function getDrumVal(id) {
+      const el = $(id);
+      const idx = getSelectedIndex(el, 'drum-item-sm');
+      const items = el.querySelectorAll('.drum-item-sm:not([aria-hidden])');
+      return items[idx] ? items[idx].textContent : '0';
+    }
 
-  const fieldLabelMap = {};
-  for (const [id, label] of fieldDefs) {
-    fieldLabelMap[id] = label;
+    const bpSys = getDrumVal('bpSys1') + getDrumVal('bpSys2') + getDrumVal('bpSys3');
+    const bpDia = getDrumVal('bpDia1') + getDrumVal('bpDia2') + getDrumVal('bpDia3');
+    const hr = getDrumVal('hr1') + getDrumVal('hr2') + getDrumVal('hr3');
+    const tempInt = getDrumVal('tempInt');
+    const tempDec = getDrumVal('tempDec');
+    const spo2 = getDrumVal('spo2d1') + getDrumVal('spo2d2') + getDrumVal('spo2d3');
+
+    vitalData = { bpSys, bpDia, hr, tempInt, tempDec, spo2 };
+    vitalConfirmed = true;
+    $('vitalBtn').textContent = 'バイタル入力済 ✓';
+    $('vitalBtn').classList.add('filled');
   }
-  const settingLabelMap = {
-    adl: "利用者ADL",
-    dementia: "認知症の有無",
-    fallRisk: "転倒リスク評価",
-    facilityType: "施設種別",
+
+  vitalBackdrop.classList.remove('visible');
+  vitalDialog.classList.remove('open');
+  vitalDialog.setAttribute('aria-hidden','true');
+  vitalBackdrop.setAttribute('aria-hidden','true');
+  document.body.style.overflow = '';
+  $('vitalBtn').focus();
+}
+
+$('vitalBtn').addEventListener('click', openVitalDialog);
+$('vitalCloseBtn').addEventListener('click', () => closeVitalDialog(false));
+$('vitalCancel').addEventListener('click', () => closeVitalDialog(false));
+$('vitalConfirm').addEventListener('click', () => closeVitalDialog(true));
+vitalBackdrop.addEventListener('click', () => closeVitalDialog(false));
+
+// ===== FORM SUBMIT =====
+const reportForm = $('reportForm');
+const submitBtn = $('submitBtn');
+const submitBtnLabel = $('submitBtnLabel');
+const submitSpinner = $('submitSpinner');
+const replyArea = $('replyArea');
+const replyBody = $('replyBody');
+const copyBtn = $('copyBtn');
+let lastReplyText = '';
+
+reportForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const place = $('place').value.trim();
+  const fallResponse = $('fallResponse').value.trim();
+  const afterResponse = $('afterResponse').value.trim();
+  const notes = $('notes').value.trim();
+  const statement = $('statement').value.trim();
+  const injury = $('injury').value.trim();
+  const timeVal = $('time').value.trim();
+
+  if (!place && !fallResponse && !afterResponse && !notes) return;
+
+  // Build message text
+  const lines = [];
+  lines.push('【施設情報】');
+  const facilityTypeVal = $('facilityType').value;
+  const fallRiskVal = $('fallRisk').value;
+  const adlVal = $('adl').value;
+  const dementiaVal = $('dementia').value;
+  if (facilityTypeVal) lines.push('施設形態: ' + facilityTypeVal);
+  if (fallRiskVal) lines.push('転倒リスク: ' + fallRiskVal);
+  if (adlVal) lines.push('利用者ADL: ' + adlVal);
+  if (dementiaVal) lines.push('認知症の有無: ' + dementiaVal);
+  lines.push('');
+  lines.push('【事故発見時の状況】');
+  if (timeVal) lines.push('発生時刻: ' + timeVal);
+  if (place) lines.push('発生場所: ' + place);
+  if (fallResponse) lines.push('事故内容: ' + fallResponse);
+  if (statement) lines.push('利用者の発言: ' + statement);
+  if (injury) lines.push('外傷・可動域: ' + injury);
+  if (vitalConfirmed && vitalData) {
+    lines.push('【バイタル】血圧 ' + vitalData.bpSys + '/' + vitalData.bpDia + ' mmHg、脈拍 ' + vitalData.hr + ' 回/分、体温 ' + vitalData.tempInt + '.' + vitalData.tempDec + '℃、SpO2 ' + vitalData.spo2 + '%');
+  }
+  lines.push('');
+  lines.push('【事故後の対応】');
+  if (afterResponse) lines.push('事故後対応: ' + afterResponse);
+  if (notes) lines.push('補足・その他: ' + notes);
+
+  const messageText = lines.join('\n');
+
+  // Collect report fields for storage
+  const reportFields = {
+    facilityType: facilityTypeVal,
+    fallRisk: fallRiskVal,
+    adl: adlVal,
+    dementia: dementiaVal,
+    time: timeVal,
+    place,
+    fallResponse,
+    statement,
+    injury,
+    afterResponse,
+    notes,
+    vitals: vitalConfirmed && vitalData
+      ? ('血圧 ' + vitalData.bpSys + '/' + vitalData.bpDia + ' mmHg、脈拍 ' + vitalData.hr + ' 回/分、体温 ' + vitalData.tempInt + '.' + vitalData.tempDec + '℃、SpO2 ' + vitalData.spo2 + '%')
+      : '',
   };
-  const allLabelMap = { ...settingLabelMap, ...fieldLabelMap };
 
-  function formatTimestamp(isoString) {
-    const d = new Date(isoString);
-    if (isNaN(d.getTime())) return isoString;
-    return d.toLocaleString("ja-JP");
+  // Show loading
+  submitBtn.disabled = true;
+  submitBtn.classList.add('loading');
+  submitBtnLabel.textContent = '生成中…';
+  replyArea.classList.add('visible');
+  replyBody.innerHTML = '<div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line"></div>';
+
+  // Build request body
+  const reqBody = {
+    messages: [{ role: 'user', content: messageText }],
+    report_fields: reportFields,
+  };
+  if (facilityTypeVal) reqBody.facility_type = facilityTypeVal;
+  if (fallRiskVal) reqBody.fall_risk = fallRiskVal;
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(reqBody),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    lastReplyText = data.reply || '';
+    replyBody.innerHTML = marked.parse(lastReplyText);
+    // Clear form and draft
+    clearFormFields();
+    clearDraft();
+    vitalConfirmed = false;
+    vitalData = null;
+    $('vitalBtn').textContent = 'バイタルを入力';
+    $('vitalBtn').classList.remove('filled');
+    $('timeTrigger').textContent = '--:--';
+    $('timeTrigger').classList.remove('filled');
+  } catch (err) {
+    replyBody.innerHTML = '<div class="error-toast" role="alert">生成できませんでした。もう一度お試しください。（' + err.message + '）</div>';
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.classList.remove('loading');
+    submitBtnLabel.textContent = '報告書を生成';
+    replyArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
+});
 
-  function showReportList() {
-    reportDetailViewEl.style.display = "none";
-    reportListViewEl.style.display = "block";
+function clearFormFields() {
+  const ids = ['facilityType','fallRisk','adl','dementia','place','fallResponse','statement','injury','afterResponse','notes'];
+  for (const id of ids) {
+    const el = $(id);
+    if (el) el.value = '';
   }
+  $('time').value = '';
+}
 
-  async function openReportsPanel() {
-    mainViewEl.classList.add("hidden");
-    reportsPanelEl.classList.add("open");
-    toggleReportsEl.textContent = "チャットに戻る";
-    showReportList();
-    await loadReportList();
+// Copy button
+copyBtn.addEventListener('click', () => {
+  if (!lastReplyText) return;
+  navigator.clipboard.writeText(lastReplyText).then(() => {
+    copyBtn.textContent = 'コピーしました ✓';
+    setTimeout(() => { copyBtn.textContent = 'コピー'; }, 2000);
+  }).catch(() => {});
+});
+
+// ===== REPORTS LIST =====
+const reportListArea = $('reportListArea');
+const backBtn = $('backBtn');
+
+async function loadReportList() {
+  reportDetailPanel.classList.remove('visible');
+  tabReportsPanel.style.display = '';
+
+  reportListArea.innerHTML = buildSkeletonRows(3);
+  try {
+    const res = await fetch('/api/reports');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const reports = await res.json();
+    renderReportList(reports);
+  } catch (err) {
+    reportListArea.innerHTML = '<div class="reports-empty">報告書の取得に失敗しました。</div>';
   }
+}
 
-  function closeReportsPanel() {
-    mainViewEl.classList.remove("hidden");
-    reportsPanelEl.classList.remove("open");
-    toggleReportsEl.textContent = "報告書一覧";
+function buildSkeletonRows(n) {
+  return Array.from({length:n}, () =>
+    '<div class="skeleton-row"><div class="skeleton-line" style="width:40%"></div><div class="skeleton-line" style="width:25%;margin-top:8px"></div></div>'
+  ).join('');
+}
+
+function formatTimestamp(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  return d.toLocaleString('ja-JP');
+}
+
+function renderReportList(reports) {
+  if (!reports || reports.length === 0) {
+    reportListArea.innerHTML = '<div class="reports-empty">まだ報告書がありません</div>';
+    return;
   }
+  const sorted = [...reports].sort((a,b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+  const ul = document.createElement('ul');
+  ul.className = 'reports-list';
+  ul.setAttribute('role','list');
+  for (const report of sorted) {
+    const li = document.createElement('li');
+    li.className = 'reports-list-item';
+    li.setAttribute('role','button');
+    li.setAttribute('tabindex','0');
 
-  let reportsPanelOpen = false;
-  toggleReportsEl.addEventListener("click", () => {
-    reportsPanelOpen = !reportsPanelOpen;
-    if (reportsPanelOpen) {
-      openReportsPanel();
-    } else {
-      closeReportsPanel();
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'report-time';
+    timeSpan.textContent = formatTimestamp(report.submitted_at);
+
+    li.appendChild(timeSpan);
+
+    const facilityType = (report.fields && report.fields.facilityType) || '';
+    if (facilityType) {
+      const chip = document.createElement('span');
+      chip.className = 'facility-chip';
+      chip.textContent = facilityType;
+      li.appendChild(chip);
     }
-  });
 
-  backToListEl.addEventListener("click", showReportList);
-
-  async function loadReportList() {
-    reportListContainerEl.innerHTML = "<div class=\"report-empty\">読み込み中...</div>";
-    try {
-      const res = await fetch("/api/reports");
-      if (!res.ok) {
-        throw new Error("リクエストに失敗しました: " + res.status);
-      }
-      const reports = await res.json();
-      renderReportList(reports);
-    } catch (err) {
-      reportListContainerEl.innerHTML =
-        "<div class=\"report-empty\">報告書の取得に失敗しました: " + err.message + "</div>";
-    }
+    li.addEventListener('click', () => showReportDetail(report));
+    li.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showReportDetail(report); }
+    });
+    ul.appendChild(li);
   }
+  reportListArea.innerHTML = '';
+  reportListArea.appendChild(ul);
+}
 
-  function renderReportList(reports) {
-    if (!reports || reports.length === 0) {
-      reportListContainerEl.innerHTML = "<div class=\"report-empty\">報告書がありません</div>";
-      return;
-    }
+function showReportDetail(report) {
+  tabReportsPanel.style.display = 'none';
+  reportDetailPanel.classList.add('visible');
 
-    const sorted = [...reports].sort(
-      (a, b) => new Date(b.submitted_at) - new Date(a.submitted_at)
-    );
+  const detailMeta = $('detailMeta');
+  const lines = [];
+  lines.push('提出日時: ' + formatTimestamp(report.submitted_at));
+  const f = report.fields || {};
+  if (f.facilityType) lines.push('施設形態: ' + f.facilityType);
+  if (f.fallRisk) lines.push('転倒リスク: ' + f.fallRisk);
+  detailMeta.textContent = lines.join('　/　');
 
-    const ul = document.createElement("ul");
-    ul.className = "report-list";
-    for (const report of sorted) {
-      const li = document.createElement("li");
-      li.className = "report-list-item";
+  const detailBody = $('detailBody');
+  detailBody.innerHTML = marked.parse(report.reply || '（内容なし）');
+}
 
-      const timeDiv = document.createElement("div");
-      timeDiv.className = "report-time";
-      timeDiv.textContent = formatTimestamp(report.submitted_at);
-      li.appendChild(timeDiv);
-
-      const previewText = (report.reply || "").slice(0, 60).replace(/\n/g, " ");
-      if (previewText) {
-        const previewDiv = document.createElement("div");
-        previewDiv.className = "report-preview";
-        previewDiv.textContent = previewText + (report.reply.length > 60 ? "..." : "");
-        li.appendChild(previewDiv);
-      }
-
-      li.addEventListener("click", () => showReportDetail(report));
-      ul.appendChild(li);
-    }
-    reportListContainerEl.innerHTML = "";
-    reportListContainerEl.appendChild(ul);
-  }
-
-  function showReportDetail(report) {
-    reportDetailEl.innerHTML = "";
-
-    const timeP = document.createElement("p");
-    timeP.innerHTML = "<strong>提出日時:</strong> " + formatTimestamp(report.submitted_at);
-    reportDetailEl.appendChild(timeP);
-
-    const fieldsHeading = document.createElement("h3");
-    fieldsHeading.textContent = "フォーム入力内容";
-    reportDetailEl.appendChild(fieldsHeading);
-
-    const table = document.createElement("table");
-    table.className = "report-fields-table";
-    const fields = report.fields || {};
-    for (const id of Object.keys(fields)) {
-      const value = fields[id];
-      if (!value) continue;
-      const tr = document.createElement("tr");
-      const tdLabel = document.createElement("td");
-      tdLabel.className = "field-label";
-      tdLabel.textContent = allLabelMap[id] || id;
-      const tdValue = document.createElement("td");
-      tdValue.style.whiteSpace = "pre-wrap";
-      tdValue.textContent = value;
-      tr.appendChild(tdLabel);
-      tr.appendChild(tdValue);
-      table.appendChild(tr);
-    }
-    reportDetailEl.appendChild(table);
-
-    const replyHeading = document.createElement("h3");
-    replyHeading.textContent = "アシスタントの生成結果";
-    reportDetailEl.appendChild(replyHeading);
-
-    const replyDiv = document.createElement("div");
-    replyDiv.className = "body";
-    replyDiv.innerHTML = marked.parse(report.reply || "");
-    reportDetailEl.appendChild(replyDiv);
-
-    reportListViewEl.style.display = "none";
-    reportDetailViewEl.style.display = "block";
-  }
+backBtn.addEventListener('click', () => {
+  reportDetailPanel.classList.remove('visible');
+  tabReportsPanel.style.display = '';
+});
 </script>
 </body>
 </html>
