@@ -106,21 +106,36 @@ data "aws_iam_policy_document" "github_actions_deploy" {
   }
 
   # CloudFormation（sam deploy + スタック出力取得）
+  # sam deployが内部で呼び出すアクションが多岐にわたるため、
+  # 対象スタック2つにスコープを絞った上でcloudformation:*を許可する
   statement {
-    sid    = "CloudFormationStackOps"
-    effect = "Allow"
-    actions = [
-      "cloudformation:DescribeStacks",
-      "cloudformation:DescribeStackEvents",
-      "cloudformation:DescribeChangeSet",
-      "cloudformation:CreateChangeSet",
-      "cloudformation:ExecuteChangeSet",
-      "cloudformation:DeleteChangeSet",
-      "cloudformation:GetTemplate",
-      "cloudformation:ValidateTemplate",
-    ]
+    sid     = "CloudFormationStackOps"
+    effect  = "Allow"
+    actions = ["cloudformation:*"]
     resources = [
+      # アプリ本体スタック
       "arn:aws:cloudformation:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:stack/${var.stack_name}/*",
+      # SAM CLIが内部管理するS3バケット用スタック
+      "arn:aws:cloudformation:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:stack/aws-sam-cli-managed-default/*",
+    ]
+  }
+
+  # ValidateTemplate / GetTemplateSummary はリソース指定不可のため * が必要
+  statement {
+    sid     = "CloudFormationGlobal"
+    effect  = "Allow"
+    actions = ["cloudformation:ValidateTemplate", "cloudformation:GetTemplateSummary"]
+    resources = ["*"]
+  }
+
+  # SAM transform（AWS::Serverless-2016-10-31）の使用許可
+  # ChangeSet作成時にtransformリソースへのcreateChangeset権限が必要
+  statement {
+    sid     = "CloudFormationSAMTransform"
+    effect  = "Allow"
+    actions = ["cloudformation:CreateChangeSet"]
+    resources = [
+      "arn:aws:cloudformation:${data.aws_region.current.name}:aws:transform/Serverless-2016-10-31",
     ]
   }
 
