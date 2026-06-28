@@ -1,21 +1,13 @@
 import os
 from pathlib import Path
 
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
-from fastapi import Cookie, Depends, FastAPI, HTTPException, Response, status
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from auth import (
-    SESSION_COOKIE_NAME,
-    SESSION_MAX_AGE_SECONDS,
-    create_session_token,
-    logout_session,
-    require_auth,
-    verify_password,
-)
 from bot import ask
 from storage import list_reports, save_report
 
@@ -37,9 +29,22 @@ class Message(BaseModel):
     content: str
 
 
+FacilityType = Literal[
+    "グループホーム",
+    "特別養護老人ホーム",
+    "介護老人保健施設",
+    "デイサービス",
+    "自宅",
+]
+
+FallRisk = Literal["小", "中", "高"]
+
+
 class ChatRequest(BaseModel):
     messages: list[Message]
     report_fields: Optional[dict[str, Any]] = None
+    facility_type: Optional[FacilityType] = None
+    fall_risk: Optional[FallRisk] = None
 
 
 class ChatResponse(BaseModel):
@@ -53,50 +58,26 @@ class ReportResponse(BaseModel):
     reply: str
 
 
-class LoginRequest(BaseModel):
-    password: str
-
-
-@app.post("/api/login")
-def login(request: LoginRequest, response: Response) -> dict[str, bool]:
-    if not verify_password(request.password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password")
-    token = create_session_token()
-    response.set_cookie(
-        key=SESSION_COOKIE_NAME,
-        value=token,
-        max_age=SESSION_MAX_AGE_SECONDS,
-        httponly=True,
-        samesite="lax",
-    )
-    return {"ok": True}
-
-
-@app.post("/api/logout")
-def logout(response: Response, staff_session: str | None = Cookie(default=None)) -> dict[str, bool]:
-    if staff_session:
-        logout_session(staff_session)
-    response.delete_cookie(key=SESSION_COOKIE_NAME)
-    return {"ok": True}
-
-
-@app.get("/api/session", dependencies=[Depends(require_auth)])
-def session_check() -> dict[str, bool]:
-    return {"authenticated": True}
-
-
-@app.post("/api/chat", response_model=ChatResponse, dependencies=[Depends(require_auth)])
+@app.post("/api/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
     messages = [m.model_dump() for m in request.messages]
-    reply = ask(messages)
+    reply = ask(messages, facility_type=request.facility_type, fall_risk=request.fall_risk)
     if request.report_fields is not None:
         save_report(request.report_fields, reply)
     return ChatResponse(reply=reply)
 
 
-@app.get("/api/reports", response_model=list[ReportResponse], dependencies=[Depends(require_auth)])
+@app.get("/api/reports", response_model=list[ReportResponse])
 def get_reports() -> list[dict[str, Any]]:
     return list_reports()
+
+
+@app.api_route(
+    "/api/{path:path}",
+    methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"],
+)
+def api_not_found(path: str) -> None:
+    raise HTTPException(status_code=404, detail="Not Found")
 
 
 if STATIC_DIR.is_dir():
