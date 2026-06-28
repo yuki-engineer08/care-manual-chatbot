@@ -72,10 +72,18 @@ input, select, textarea { font-family: inherit; }
   height: 56px;
   display: flex;
   align-items: center;
-  padding: 0 var(--space-4);
+  justify-content: center;
+  padding: 0;
   position: sticky;
   top: 0;
   z-index: 100;
+}
+.app-header__inner {
+  max-width: 800px;
+  width: 100%;
+  padding: 0 var(--space-4);
+  display: flex;
+  align-items: center;
 }
 .app-header__title {
   font-weight: 600;
@@ -87,6 +95,12 @@ input, select, textarea { font-family: inherit; }
 .tab-nav {
   background: var(--color-elevated);
   border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: center;
+}
+.tab-nav-inner {
+  max-width: 800px;
+  width: 100%;
   display: flex;
 }
 .tab-btn {
@@ -106,29 +120,33 @@ input, select, textarea { font-family: inherit; }
   border-bottom-color: var(--color-accent);
 }
 
-/* ===== SECTION HEADER (Signature) ===== */
+/* ===== SECTION HEADER ===== */
 .section-header {
-  background: var(--color-accent);
   display: flex;
   align-items: center;
-  padding: 10px var(--space-4);
-  gap: 10px;
-  margin: 0 calc(-1 * var(--space-4));
+  gap: 8px;
+  padding: 0 0 var(--space-3) 0;
+  border-bottom: 1.5px solid var(--color-border);
 }
 .section-header__bar {
   width: 3px;
-  height: 20px;
-  background: var(--color-accent-light);
+  height: 16px;
+  background: var(--color-accent);
   flex-shrink: 0;
+  border-radius: 1px;
 }
 .section-header__label {
-  font: 800 18px/1 'Noto Sans JP', sans-serif;
-  color: #fff;
-  letter-spacing: -0.01em;
+  font: 700 14px/1 'Noto Sans JP', sans-serif;
+  color: var(--color-text);
+  letter-spacing: 0.03em;
+  text-transform: none;
 }
 
 /* ===== FORM AREA ===== */
 .form-area {
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
@@ -138,7 +156,6 @@ input, select, textarea { font-family: inherit; }
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  overflow: hidden;
 }
 .field {
   display: flex;
@@ -635,12 +652,16 @@ input, select, textarea { font-family: inherit; }
 <body>
 
 <header class="app-header">
-  <span class="app-header__title">事故報告書アシスト</span>
+  <div class="app-header__inner">
+    <span class="app-header__title">事故報告書アシスト</span>
+  </div>
 </header>
 
 <nav class="tab-nav" role="tablist">
-  <button class="tab-btn active" id="tabBtnCreate" role="tab" aria-selected="true" aria-controls="tabCreate">報告書を作成</button>
-  <button class="tab-btn" id="tabBtnReports" role="tab" aria-selected="false" aria-controls="tabReports">過去の報告書</button>
+  <div class="tab-nav-inner">
+    <button class="tab-btn active" id="tabBtnCreate" role="tab" aria-selected="true" aria-controls="tabCreate">報告書を作成</button>
+    <button class="tab-btn" id="tabBtnReports" role="tab" aria-selected="false" aria-controls="tabReports">過去の報告書</button>
+  </div>
 </nav>
 
 <!-- TAB A: 報告書を作成 -->
