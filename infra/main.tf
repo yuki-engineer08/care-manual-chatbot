@@ -120,7 +120,10 @@ data "aws_iam_policy_document" "github_actions_deploy" {
       "cloudformation:ValidateTemplate",
     ]
     resources = [
+      # アプリ本体スタック
       "arn:aws:cloudformation:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:stack/${var.stack_name}/*",
+      # SAM CLIが内部管理するS3バケット用スタック
+      "arn:aws:cloudformation:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:stack/aws-sam-cli-managed-default/*",
     ]
   }
 
