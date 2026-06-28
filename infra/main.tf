@@ -120,12 +120,23 @@ data "aws_iam_policy_document" "github_actions_deploy" {
     ]
   }
 
-  # cloudformation:ValidateTemplate / GetTemplateSummary は resource: * が必要
+  # ValidateTemplate / GetTemplateSummary はリソース指定不可のため * が必要
   statement {
     sid     = "CloudFormationGlobal"
     effect  = "Allow"
     actions = ["cloudformation:ValidateTemplate", "cloudformation:GetTemplateSummary"]
     resources = ["*"]
+  }
+
+  # SAM transform（AWS::Serverless-2016-10-31）の使用許可
+  # ChangeSet作成時にtransformリソースへのcreateChangeset権限が必要
+  statement {
+    sid     = "CloudFormationSAMTransform"
+    effect  = "Allow"
+    actions = ["cloudformation:CreateChangeSet"]
+    resources = [
+      "arn:aws:cloudformation:${data.aws_region.current.name}:aws:transform/Serverless-2016-10-31",
+    ]
   }
 
   # Lambda関数の更新
