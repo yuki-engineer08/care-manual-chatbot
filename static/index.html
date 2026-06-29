@@ -226,10 +226,14 @@ input, select, textarea { font-family: inherit; }
 }
 .vital-btn:hover { border-color: var(--color-accent); }
 .vital-btn.filled {
-  background: var(--color-accent-light);
-  color: var(--color-accent);
-  border-color: var(--color-accent);
-  font-weight: 600;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 400;
+  white-space: normal;
+  height: auto;
+  min-height: 52px;
+  line-height: 1.6;
+  text-align: left;
 }
 
 /* ===== SUBMIT BUTTON ===== */
@@ -475,11 +479,10 @@ input, select, textarea { font-family: inherit; }
   right: 0;
   height: 52px;
   transform: translateY(-50%);
-  background: var(--color-accent-light);
   border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
   pointer-events: none;
-  z-index: 1;
+  z-index: 2;
 }
 .drum-scroll {
   height: 100%;
@@ -504,6 +507,7 @@ input, select, textarea { font-family: inherit; }
 .drum-item.selected {
   font: 700 36px/1 'Noto Sans JP', sans-serif;
   color: var(--color-accent);
+  background: var(--color-accent-light);
 }
 .picker-actions {
   display: flex;
@@ -647,6 +651,24 @@ input, select, textarea { font-family: inherit; }
 .drum-item-sm.selected {
   font: 700 28px/1 'Noto Sans JP', sans-serif;
   color: var(--color-accent);
+  background: var(--color-accent-light);
+}
+.time-preview {
+  text-align: center;
+  font: 700 40px/1.2 'Noto Sans JP', sans-serif;
+  color: var(--color-accent);
+  margin-bottom: var(--space-4);
+  letter-spacing: 0.05em;
+}
+.vital-preview {
+  font-size: 13px;
+  color: var(--color-muted);
+  background: var(--color-background);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+  line-height: 1.8;
+  text-align: center;
 }
 </style>
 </head>
@@ -735,6 +757,10 @@ input, select, textarea { font-family: inherit; }
           <textarea id="fallResponse" name="fallResponse" rows="3" placeholder="事故発見時の状況・発生経緯を記入してください"></textarea>
         </div>
         <div class="field">
+          <label for="afterResponse">事故後対応</label>
+          <textarea id="afterResponse" name="afterResponse" rows="3" placeholder="事故後に行った対応・報告・受診状況など"></textarea>
+        </div>
+        <div class="field">
           <label for="statement">利用者の発言</label>
           <textarea id="statement" name="statement" rows="2" placeholder="利用者本人の発言内容"></textarea>
         </div>
@@ -752,10 +778,6 @@ input, select, textarea { font-family: inherit; }
         </div>
         <div class="field">
           <button type="button" class="vital-btn" id="vitalBtn">バイタルを入力</button>
-        </div>
-        <div class="field">
-          <label for="afterResponse">事故後対応</label>
-          <textarea id="afterResponse" name="afterResponse" rows="3" placeholder="事故後に行った対応・報告・受診状況など"></textarea>
         </div>
         <div class="field">
           <label for="notes">補足・その他</label>
@@ -821,6 +843,7 @@ input, select, textarea { font-family: inherit; }
 <div class="overlay-backdrop" id="timeBackdrop" aria-hidden="true"></div>
 <div class="time-picker-sheet" id="timePicker" role="dialog" aria-modal="true" aria-label="時刻を選択" aria-hidden="true">
   <div class="time-picker-title">時刻を選択</div>
+  <div class="time-preview" id="timePreview">--:--</div>
   <div class="drum-row">
     <div class="drum-col">
       <div class="drum-label">時</div>
@@ -859,21 +882,21 @@ input, select, textarea { font-family: inherit; }
       <div class="vital-col">
         <div class="vital-col-label">収縮期</div>
         <div class="drum-scroll-wrap-sm">
-          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:2;pointer-events:none;"></div>
           <div class="drum-scroll-sm" id="bpSys1"></div>
         </div>
       </div>
       <div class="vital-col">
         <div class="vital-col-label">&nbsp;</div>
         <div class="drum-scroll-wrap-sm">
-          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:2;pointer-events:none;"></div>
           <div class="drum-scroll-sm" id="bpSys2"></div>
         </div>
       </div>
       <div class="vital-col">
         <div class="vital-col-label">&nbsp;</div>
         <div class="drum-scroll-wrap-sm">
-          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:2;pointer-events:none;"></div>
           <div class="drum-scroll-sm" id="bpSys3"></div>
         </div>
       </div>
@@ -881,21 +904,21 @@ input, select, textarea { font-family: inherit; }
       <div class="vital-col">
         <div class="vital-col-label">拡張期</div>
         <div class="drum-scroll-wrap-sm">
-          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:2;pointer-events:none;"></div>
           <div class="drum-scroll-sm" id="bpDia1"></div>
         </div>
       </div>
       <div class="vital-col">
         <div class="vital-col-label">&nbsp;</div>
         <div class="drum-scroll-wrap-sm">
-          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:2;pointer-events:none;"></div>
           <div class="drum-scroll-sm" id="bpDia2"></div>
         </div>
       </div>
       <div class="vital-col">
         <div class="vital-col-label">&nbsp;</div>
         <div class="drum-scroll-wrap-sm">
-          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:2;pointer-events:none;"></div>
           <div class="drum-scroll-sm" id="bpDia3"></div>
         </div>
       </div>
@@ -903,21 +926,21 @@ input, select, textarea { font-family: inherit; }
       <div class="vital-col" style="margin-left:var(--space-3)">
         <div class="vital-col-label">脈拍</div>
         <div class="drum-scroll-wrap-sm">
-          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:2;pointer-events:none;"></div>
           <div class="drum-scroll-sm" id="hr1"></div>
         </div>
       </div>
       <div class="vital-col">
         <div class="vital-col-label">&nbsp;</div>
         <div class="drum-scroll-wrap-sm">
-          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:2;pointer-events:none;"></div>
           <div class="drum-scroll-sm" id="hr2"></div>
         </div>
       </div>
       <div class="vital-col">
         <div class="vital-col-label">&nbsp;</div>
         <div class="drum-scroll-wrap-sm">
-          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:2;pointer-events:none;"></div>
           <div class="drum-scroll-sm" id="hr3"></div>
         </div>
       </div>
@@ -932,7 +955,7 @@ input, select, textarea { font-family: inherit; }
       <div class="vital-col">
         <div class="vital-col-label">整数部（30〜42）</div>
         <div class="drum-scroll-wrap-sm" style="width:64px">
-          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:2;pointer-events:none;"></div>
           <div class="drum-scroll-sm" id="tempInt"></div>
         </div>
       </div>
@@ -940,7 +963,7 @@ input, select, textarea { font-family: inherit; }
       <div class="vital-col">
         <div class="vital-col-label">小数部（0〜9）</div>
         <div class="drum-scroll-wrap-sm">
-          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:2;pointer-events:none;"></div>
           <div class="drum-scroll-sm" id="tempDec"></div>
         </div>
       </div>
@@ -955,21 +978,21 @@ input, select, textarea { font-family: inherit; }
       <div class="vital-col">
         <div class="vital-col-label">百</div>
         <div class="drum-scroll-wrap-sm">
-          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:2;pointer-events:none;"></div>
           <div class="drum-scroll-sm" id="spo2d1"></div>
         </div>
       </div>
       <div class="vital-col">
         <div class="vital-col-label">十</div>
         <div class="drum-scroll-wrap-sm">
-          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:2;pointer-events:none;"></div>
           <div class="drum-scroll-sm" id="spo2d2"></div>
         </div>
       </div>
       <div class="vital-col">
         <div class="vital-col-label">一</div>
         <div class="drum-scroll-wrap-sm">
-          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;background:var(--color-accent-light);border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:1;pointer-events:none;"></div>
+          <div class="drum-highlight" style="height:48px;top:50%;transform:translateY(-50%);position:absolute;left:0;right:0;border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);z-index:2;pointer-events:none;"></div>
           <div class="drum-scroll-sm" id="spo2d3"></div>
         </div>
       </div>
@@ -977,6 +1000,7 @@ input, select, textarea { font-family: inherit; }
     </div>
   </div>
 
+  <div class="vital-preview" id="vitalPreview">血圧: --/-- mmHg　脈拍: -- 回/分　体温: --.- ℃　SpO2: -- %</div>
   <div class="picker-actions">
     <button type="button" class="picker-cancel" id="vitalCancel">キャンセル</button>
     <button type="button" class="picker-confirm" id="vitalConfirm">確定</button>
@@ -1096,7 +1120,7 @@ function syncSelected(container, itemClass, itemHeight) {
   let closestIdx = 0;
   let closestDist = Infinity;
   items.forEach((item, i) => {
-    const itemCenter = item.offsetTop + itemHeight / 2;
+    const itemCenter = (i + 1) * itemHeight + itemHeight / 2;
     const dist = Math.abs(center - itemCenter);
     if (dist < closestDist) {
       closestDist = dist;
@@ -1107,6 +1131,12 @@ function syncSelected(container, itemClass, itemHeight) {
     item.classList.toggle('selected', i === closestIdx);
   });
   return closestIdx;
+}
+
+function getSelectedText(container, itemClass) {
+  const items = container.querySelectorAll('.' + itemClass + ':not([aria-hidden])');
+  for (const item of items) { if (item.classList.contains('selected')) return item.textContent; }
+  return '0';
 }
 
 function getSelectedIndex(container, itemClass) {
@@ -1144,8 +1174,15 @@ buildDrumItems(minuteDrum, minutes, 'drum-item', 0);
 function onDrumScroll(drum) {
   syncSelected(drum, 'drum-item', ITEM_H);
 }
-hourDrum.addEventListener('scroll', () => onDrumScroll(hourDrum), {passive:true});
-minuteDrum.addEventListener('scroll', () => onDrumScroll(minuteDrum), {passive:true});
+
+function updateTimePreview() {
+  const h = getSelectedText(hourDrum, 'drum-item');
+  const m = getSelectedText(minuteDrum, 'drum-item');
+  $('timePreview').textContent = h + ':' + m;
+}
+
+hourDrum.addEventListener('scroll', () => { onDrumScroll(hourDrum); updateTimePreview(); }, {passive:true});
+minuteDrum.addEventListener('scroll', () => { onDrumScroll(minuteDrum); updateTimePreview(); }, {passive:true});
 
 // Snap on scroll end
 let hourScrollTimer, minuteScrollTimer;
@@ -1190,6 +1227,7 @@ function openTimePicker() {
       scrollToIndex(minuteDrum, pm, ITEM_H, false);
       syncSelected(hourDrum, 'drum-item', ITEM_H);
       syncSelected(minuteDrum, 'drum-item', ITEM_H);
+      updateTimePreview();
       $('timeConfirm').focus();
     });
   });
@@ -1197,10 +1235,8 @@ function openTimePicker() {
 
 function closeTimePicker(confirm) {
   if (confirm) {
-    const hIdx = getSelectedIndex(hourDrum, 'drum-item');
-    const mIdx = getSelectedIndex(minuteDrum, 'drum-item');
-    const h = String(hIdx).padStart(2,'0');
-    const m = String(mIdx).padStart(2,'0');
+    const h = getSelectedText(hourDrum, 'drum-item');
+    const m = getSelectedText(minuteDrum, 'drum-item');
     const val = h + ':' + m;
     $('time').value = val;
     $('timeTrigger').textContent = val;
@@ -1249,10 +1285,22 @@ const vitalDrums = [
   ['spo2d3', Array.from({length:10},(_,i)=>String(i)), 0],
 ];
 
+function updateVitalPreview() {
+  function v(id) { return getSelectedText($(id), 'drum-item-sm'); }
+  const sys = v('bpSys1') + v('bpSys2') + v('bpSys3');
+  const dia = v('bpDia1') + v('bpDia2') + v('bpDia3');
+  const hr  = v('hr1') + v('hr2') + v('hr3');
+  const ti  = v('tempInt');
+  const td  = v('tempDec');
+  const spo2 = String(parseInt(v('spo2d1') + v('spo2d2') + v('spo2d3')) || 0);
+  $('vitalPreview').textContent =
+    '血圧: ' + parseInt(sys) + '/' + parseInt(dia) + 'mmHg　脈拍: ' + parseInt(hr) + '回/分　体温: ' + ti + '.' + td + '℃　SpO2: ' + spo2 + '%';
+}
+
 vitalDrums.forEach(([id, vals, initIdx]) => {
   buildDrumItems($(id), vals, 'drum-item-sm', initIdx);
   const el = $(id);
-  el.addEventListener('scroll', () => syncSelected(el, 'drum-item-sm', ITEM_H_SM), {passive:true});
+  el.addEventListener('scroll', () => { syncSelected(el, 'drum-item-sm', ITEM_H_SM); updateVitalPreview(); }, {passive:true});
   let timer;
   el.addEventListener('scroll', () => {
     clearTimeout(timer);
@@ -1277,10 +1325,10 @@ function openVitalDialog() {
     requestAnimationFrame(() => {
       vitalDrums.forEach(([id, vals, initIdx]) => {
         const el = $(id);
-        // If already confirmed, restore current values
         scrollToIndex(el, initIdx, ITEM_H_SM, false);
         syncSelected(el, 'drum-item-sm', ITEM_H_SM);
       });
+      updateVitalPreview();
       $('vitalConfirm').focus();
     });
   });
@@ -1288,12 +1336,7 @@ function openVitalDialog() {
 
 function closeVitalDialog(confirm) {
   if (confirm) {
-    function getDrumVal(id) {
-      const el = $(id);
-      const idx = getSelectedIndex(el, 'drum-item-sm');
-      const items = el.querySelectorAll('.drum-item-sm:not([aria-hidden])');
-      return items[idx] ? items[idx].textContent : '0';
-    }
+    function getDrumVal(id) { return getSelectedText($(id), 'drum-item-sm'); }
 
     const bpSys = getDrumVal('bpSys1') + getDrumVal('bpSys2') + getDrumVal('bpSys3');
     const bpDia = getDrumVal('bpDia1') + getDrumVal('bpDia2') + getDrumVal('bpDia3');
@@ -1304,7 +1347,11 @@ function closeVitalDialog(confirm) {
 
     vitalData = { bpSys, bpDia, hr, tempInt, tempDec, spo2 };
     vitalConfirmed = true;
-    $('vitalBtn').textContent = 'バイタル入力済 ✓';
+    $('vitalBtn').textContent =
+      '血圧: ' + parseInt(bpSys) + '/' + parseInt(bpDia) + 'mmHg　' +
+      '脈拍: ' + parseInt(hr) + '回/分　' +
+      '体温: ' + tempInt + '.' + tempDec + '℃　' +
+      'SpO2: ' + parseInt(spo2) + '%';
     $('vitalBtn').classList.add('filled');
   }
 
